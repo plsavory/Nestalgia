@@ -1,3 +1,4 @@
+#include <iostream>
 #include "MainSystem.h"
 
 MainSystem::MainSystem()
@@ -21,8 +22,8 @@ void MainSystem::Execute() {
     mainCPU->Execute();
 }
 
-void MainSystem::LoadROM() {
-
+void MainSystem::LoadROM(std::string ROMFile) {
+  mainMemory->LoadFile(ROMFile);
 }
 
 void MainSystem::Run()

@@ -1,6 +1,6 @@
 
-#include "MemoryManager.h"
 #include <iostream>
+#include "MemoryManager.h"
 
 
 MemoryManager::MemoryManager()
@@ -16,9 +16,21 @@ MemoryManager::MemoryManager()
 
 MemoryManager::~MemoryManager()
 {
+	delete mainCartridge;
 }
 
+int MemoryManager::LoadFile(std::string FilePath)
+{
+	// Delete the mainCartridge instance if it already exists to free RAM.
+	if (mainCartridge)
+		delete mainCartridge;
 
+	mainCartridge = new Cartridge();
+
+	// Attempt to load the file..
+	std::cout<<"Loading file: "<<FilePath<<std::endl;
+	return 0;
+}
 
 void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 {

@@ -1,8 +1,9 @@
+#include <iostream>
 #include "UnitTestClass.h"
 #include "CPUInstructions.h"
 #include "MemoryManager.h"
 #include "CPU6502.h"
-#include <iostream>
+
 
 #pragma GCC diagnostic ignored "-Woverflow"
 // This class should not be neccessary in future. This is currently being used just to test the functionality of the emulator before it can actually run emulator test programs.

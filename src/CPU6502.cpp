@@ -1,6 +1,6 @@
+#include <iostream>
 #include "MemoryManager.h"
 #include "CPU6502.h"
-#include <iostream>
 #include <cmath>
 
 
