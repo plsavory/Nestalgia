@@ -1,0 +1,1 @@
+g++ -Dunittest -std=c++11 src\CPU6502.cpp src\MemoryManager.cpp src\UnitTestClass.cpp src\TestEntryPoint.cpp -o build\NESEmulator-ftest.exe
