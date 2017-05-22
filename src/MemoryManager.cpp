@@ -99,6 +99,29 @@ int MemoryManager::LoadFile(std::string FilePath)
 
 int MemoryManager::CheckCartridge(Cartridge &cartridge)
 {
+	switch(cartridge.FileFormat)
+	{
+		case FileType::iNES2:
+		{
+			std::cout<<"Error: Support for iNES2.0 not yet implemented."<<std::endl;
+			return -1;
+		}
+		case FileType::iNES:
+		{
+			std::cout<<"Error: Support for iNES07 not yet implemented."<<std::endl;
+			return -1;
+		}
+		case FileType::iNESOriginal:
+		{
+			std::cout<<"Error: Support for original iNES format not yet implemented."<<std::endl;
+			return -1;
+		}
+		default:
+		{
+			std::cout<<"Error: Unsupported ROM format"<<std::endl;
+			return -1;
+		}
+	}
 	return 0;
 }
 
