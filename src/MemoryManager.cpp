@@ -14,7 +14,6 @@ MemoryManager::MemoryManager()
 {
 	mapper = MemoryMapper::Test;
 
-	std::cout<<"MEMORY_INIT"<<std::endl;
 	for (int i = 0x0; i <= 0xFFFF; i++)
 		MainMemory[i] = 0x0;
 
@@ -72,7 +71,34 @@ int MemoryManager::LoadFile(std::string FilePath)
 	romStream >> std::noskipws; // Do not skip white space, we want every single character of the file.
 	std::copy(istream_iterator(romStream),istream_iterator(),std::back_inserter(tempStorage)); // Copy the contents of the file into the temporary storage vector
 
+	// Figure out which kind of iNES file we're dealing with here
+	if (tempStorage[7] == 0x08 && tempStorage[0x0C] == 0x08) {
+		std::cout<<"iNES 2.0 format detected"<<std::endl;
+		mainCartridge->FileFormat = FileType::iNES2;
+	} else if (tempStorage[7] == 0x00 && tempStorage[0x0C] == 0x00 && (tempStorage[12] + tempStorage[13] + tempStorage[14] + tempStorage[15]) == 0) {
+		std::cout<<"iNES 0.7 format detected"<<std::endl;
+		mainCartridge->FileFormat = FileType::iNES;
+	} else {
+		std::cout<<"Original iNES format detected"<<std::endl;
+		mainCartridge->FileFormat = FileType::iNESOriginal;
+	}
+
+	// Copy the 16-byte header into the appropriate section in the Cartridge
+	for (int i = 0; i<=15;i++)
+		mainCartridge->Header[i] = tempStorage[i];
+
+	// Check the cartridge type before continuing
+	if (CheckCartridge(*mainCartridge) != 0)
+	{
+		return -1;
+	}
+
 	std::cout<<"ROM File loaded successfully."<<std::endl;
+	return 0;
+}
+
+int MemoryManager::CheckCartridge(Cartridge &cartridge)
+{
 	return 0;
 }
 

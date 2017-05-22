@@ -1,6 +1,8 @@
 #pragma once
 enum MemoryMapper {None,Test};
 enum HeaderData {Const0,Const1,Const2,Const3,PROMSize,CROMSize,Flags6,Flags7,PRAMSize,Flags9,Flags10,Null};
+enum CartRegion {NTSC,PAL};
+enum FileType {iNESOriginal,iNES,iNES2};
 
 struct Cartridge
 {
@@ -10,6 +12,7 @@ struct Cartridge
 	unsigned char cROM[0x80000]; // 512KiB max
 	unsigned char InstROM[8192];
 	unsigned char PROM[32];
+	FileType FileFormat;
 };
 
 class MemoryManager
@@ -29,6 +32,7 @@ public:
 	unsigned short ZP(unsigned char Location, unsigned char Register);
 private:
 	unsigned char MainMemory[0xFFFF];
+	int CheckCartridge(Cartridge &cartridge);
 	Cartridge *mainCartridge;
 	MemoryMapper mapper;
 };

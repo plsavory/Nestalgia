@@ -11,7 +11,6 @@ CPU6502::CPU6502(MemoryManager &mManager)
 	FlagRegister = 0x0; // Initialize the flags register
 	rA, rX, rY = 0x0;
 	pc = 0x0;
-	std::cout<<"CPU_INIT"<<std::endl;
 	myState = CPUState::Running;
 }
 
@@ -163,7 +162,7 @@ void CPU6502::Execute()
 	switch (opcode)
 	{
 		default:
-		std::cout<<"CPU error - Unknown opcode: $" << std::hex << (int)opcode << std::endl;
+		std::cout<<"CPU-Error: Unknown opcode: $" << std::hex << (int)opcode << std::endl;
 		myState = CPUState::Error;
 		break;
 	}
