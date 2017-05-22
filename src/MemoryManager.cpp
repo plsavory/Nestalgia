@@ -1,7 +1,14 @@
 
 #include <iostream>
 #include "MemoryManager.h"
-
+#include <fstream>
+#include <sstream>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <cstdlib>
+#include <algorithm>
+#include <vector>
+#include <iterator>
 
 MemoryManager::MemoryManager()
 {
@@ -29,6 +36,43 @@ int MemoryManager::LoadFile(std::string FilePath)
 
 	// Attempt to load the file..
 	std::cout<<"Loading file: "<<FilePath<<std::endl;
+
+	// Make sure the ROM exists and check its size
+	struct stat fileStat;
+	int filestat = stat(FilePath.c_str(),&fileStat);
+
+	if (filestat == 0)
+	{
+		int ROMSize = fileStat.st_size;
+
+		if (ROMSize > 2630191)
+		{
+			// ROM file too large - abort
+			std::cout << "Error - ROM file is too large (" << ROMSize << ") bytes" << std::endl;
+			return -1;
+		}
+		else
+		{
+			std::cout << ROMSize << " byte ROM found..." << std::endl;
+		}
+	}
+	else
+	{
+		// File not found - abort
+		std::cout<<"Error - " << FilePath << " not found." << std::endl;
+		return -1;
+	}
+
+	// If we've gotten this far, there are no problems with the rom (yet), so continue to load...
+	typedef std::istream_iterator<unsigned char> istream_iterator;
+
+	std::ifstream romStream(FilePath,std::ios::binary); // file stream for reading file contents
+	std::vector<unsigned char> tempStorage; // temporary storage for data - will be copied into cartridge struct later
+
+	romStream >> std::noskipws; // Do not skip white space, we want every single character of the file.
+	std::copy(istream_iterator(romStream),istream_iterator(),std::back_inserter(tempStorage)); // Copy the contents of the file into the temporary storage vector
+
+	std::cout<<"ROM File loaded successfully."<<std::endl;
 	return 0;
 }
 
@@ -37,7 +81,7 @@ void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 	// There are no memory mappers emulated at the moment in this version of this emulator - this function is a lot simpler than it eventually will be.
 	// Currently still working on the CPU for the most part.
 
-	if (mapper = MemoryMapper::Test)
+	if (mapper == MemoryMapper::Test)
 	{
 		MainMemory[Location] = Value;
 		return;

@@ -18,12 +18,20 @@ void MainSystem::Reset() {
 
 void MainSystem::Execute() {
   // This will be the function which calls the main loop of the emulator - handle timings for the hardware here.
-  if (mainCPU->myState == CPUState::Running)
+  while (mainCPU->myState == CPUState::Running)
     mainCPU->Execute();
 }
 
 void MainSystem::LoadROM(std::string ROMFile) {
-  mainMemory->LoadFile(ROMFile);
+  if (mainMemory->LoadFile(ROMFile) == 0)
+  {
+    Reset();
+    Execute();
+  }
+  else
+  {
+    std::cout<<"Error loading ROM file - aborting..."<<std::endl;
+  }
 }
 
 void MainSystem::Run()

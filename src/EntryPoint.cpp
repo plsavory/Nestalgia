@@ -14,7 +14,7 @@ MainSystem emulator;
 std::string ROMFile;
 
 if (argc == 1)
-  ROMFile = "default.bin";
+  ROMFile = "nestest.nes";
   else
   ROMFile = std::string(argv[1]);
 
@@ -22,8 +22,6 @@ if (argc == 1)
 // Initialize the SFML system and pass the window handle on to the emulator object for further use.
 
 emulator.LoadROM(ROMFile);
-emulator.Reset();
-emulator.Run();
 
 return EXIT_SUCCESS;
  }
