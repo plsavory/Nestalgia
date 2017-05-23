@@ -37,6 +37,7 @@ public:
 	unsigned short ZP(unsigned char Location, unsigned char Register);
 private:
 	unsigned char MainMemory[0xFFFF];
+	void WriteRAM(unsigned short Location, unsigned char Value);
 	int CheckCartridge(Cartridge &cartridge);
 	Cartridge *mainCartridge;
 	MemoryMapper mapper;

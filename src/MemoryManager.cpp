@@ -10,6 +10,8 @@
 #include <vector>
 #include <iterator>
 
+#define TestingRAMWrapping
+
 MemoryManager::MemoryManager()
 {
 	mapper = MemoryMapper::Test;
@@ -147,23 +149,48 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 
 void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 {
-	// There are no memory mappers emulated at the moment in this version of this emulator - this function is a lot simpler than it eventually will be.
+	// There are no memory mappers emulated at the moment in this version of this emulator - this function is a lot simpler than it eventually will be
 	// Currently still working on the CPU for the most part.
 
-	if (mapper == MemoryMapper::Test)
-	{
-		MainMemory[Location] = Value;
-		return;
-	}
-	// The NES has only 2Kb RAM (0x800) - Stop here if there is no mapper selected and we try to write above here
-	if ((Location > 0x800) && (mapper == MemoryMapper::None))
-		return;
+	/*
+	NES Memory Map:
+	0000-07FF: RAM (+ Mirrored RAM)
+	2000-3FFF: PPU Registers (Mirrored every 8 bytes)
+	4000-4017: APU + I/O registers
+	4018-401F: APU + I/O Functionality (usually disabled)
+	4020-FFFF: Cartridge (All ROM + RAM chips on cartridge as well as other hardware)
+	*/
 
-	// $1000 - $1800 memory addresses mirror the RAM at $0000 $S0800 - so handle this here
-	if (Location >= 0x0000 && Location <= 0x0800)
-		MainMemory[Location + 0x1000] = Value;
+	if (Location <= 0x1FFF)
+		WriteRAM(Location,Value); // CPU is trying to write to RAM, so handle this here...
+}
 
+void MemoryManager::WriteRAM(unsigned short Location, unsigned char Value)
+{
+	/* Handle RAM mirroring and RAM writes here.
+		 RAM Map:
+		 0000-07FF - 8Kb RAM
+		 0800-0FFF - Mirrored RAM 0
+		 1000-17FF - Mirrored RAM 1
+		 1800-1FFF - Mirrored RAM 2
+	*/
+
+	// Reduce the location value to its "base" value, and then we can write them all at once to all mirrored locations.
+	while(Location > 0x07FF)
+		Location-=0x800;
+
+	#ifdef TestingRAMWrapping
+	std::cout<<"$"<<std::hex<<(int)Location<<" = "<<(int) Value<<std::endl;
+	std::cout<<"$"<<std::hex<<(int)Location+0x800<<" = "<<(int) Value<<std::endl;
+	std::cout<<"$"<<std::hex<<(int)Location+0x1000<<" = "<<(int) Value<<std::endl;
+	std::cout<<"$"<<std::hex<<(int)Location+0x1800<<" = "<<(int) Value<<std::endl;
+	#endif
+
+	// We have the base location, so write it.
 	MainMemory[Location] = Value;
+	MainMemory[0x800+Location] = Value;
+	MainMemory[0x1000+Location] = Value;
+	MainMemory[0x1800+Location] = Value;
 }
 
 unsigned char MemoryManager::ReadMemory(unsigned short Location)

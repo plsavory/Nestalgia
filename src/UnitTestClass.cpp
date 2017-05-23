@@ -30,6 +30,14 @@ void UnitTestClass::TestMemory()
 	testMemory->WriteMemory(0x100, 0xFE);
 	assert(testMemory->ReadMemory(0x100) == 0xFE);
 
+
+	// Test RAM Wrapping
+	testMemory->WriteMemory(0x0,0xAE);
+	assert(testMemory->ReadMemory(0x0 == 0xAE));
+	assert(testMemory->ReadMemory(0x800 == 0xAE));
+	assert(testMemory->ReadMemory(0x1000 == 0xAE));
+	assert(testMemory->ReadMemory(0x1800 == 0xAE));
+
 	// Simulate an Absolute request
 	unsigned char B1 = 0x40;
 	unsigned char B2 = 0x50;
@@ -60,16 +68,17 @@ void UnitTestClass::TestMemory()
 
 	// Simulate an indirect read
 	testMemory->WriteMemory(0x1000, 0x52);
-	testMemory->WriteMemory(0x1001, 0x3a);
-	testMemory->WriteMemory(0x3a52, 0x50);
-	assert(testMemory->IN(0x00, 0x10) == 0x3a52);
+	assert(testMemory->ReadMemory(0x1000) == 0x52);
+	testMemory->WriteMemory(0x1001, 0x1a);
+	testMemory->WriteMemory(0x1a52, 0x50);
+	assert(testMemory->IN(0x00, 0x10) == 0x1a52);
 	assert(testMemory->ReadMemory(testMemory->IN(0x00, 0x10)) == 0x50);
 
 	// Simulate indexed indirect read
-	testMemory->WriteMemory(0x24, 0x74);
-	testMemory->WriteMemory(0x25, 0x20);
-	testMemory->WriteMemory(0x2074, 0x43);
-	assert(testMemory->INdX(0x4, 0x20) == 0x2074);
+	testMemory->WriteMemory(0x24, 0xFF);
+	testMemory->WriteMemory(0x25, 0x1F);
+	testMemory->WriteMemory(0x1FFF, 0x43);
+	assert(testMemory->INdX(0x4, 0x20) == 0x1FFF);
 	assert(testMemory->ReadMemory(testMemory->INdX(0x4, 0x20)) == 0x43);
 
 	// Simulate indirect indexed read
