@@ -10,7 +10,6 @@ public:
 	~CPU6502();
 	CPUState myState;
 	void SetFlag(Flag flag, bool val);
-	void ClearFlag(Flag flag);
 	unsigned char GetFlags();
 	bool GetFlag(Flag flag);
 	unsigned char GetAcc();

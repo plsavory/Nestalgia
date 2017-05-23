@@ -3,6 +3,7 @@
 #include "CPU6502.h"
 #include <cmath>
 
+#define PrintInstructionExecution
 
 CPU6502::CPU6502(MemoryManager &mManager)
 {
@@ -27,11 +28,6 @@ void CPU6502::SetFlag(Flag flag, bool val)
 		FlagRegister |= flag;
 	else
 		FlagRegister &= ~(flag);
-}
-
-void CPU6502::ClearFlag(Flag flag)
-{
-
 }
 
 bool CPU6502::GetFlag(Flag flag)

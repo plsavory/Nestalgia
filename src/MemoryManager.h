@@ -1,7 +1,7 @@
 #pragma once
 enum MemoryMapper {None,Test};
 enum HeaderData {Const0,Const1,Const2,Const3,PROMSize,CROMSize,Flags6,Flags7,PRAMSize,Flags9,Flags10,Null};
-enum CartRegion {NTSC,PAL};
+enum CartRegion {NTSC,PAL,Dual};
 enum FileType {iNESOriginal,iNES,iNES2};
 
 struct Cartridge

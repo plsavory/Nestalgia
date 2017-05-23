@@ -124,10 +124,42 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 			// Store the mapper ID
 
 			// Get the size of the PRG_ROM
+			cartridge.PRGRomSize = (16384*cartridge.Header[4]);
+			std::cout<<"PRG_ROM Size: "<<std::dec<<(int)cartridge.PRGRomSize<<"bytes"<<std::endl;
 
 			// Get the size of the CHRRom
+			cartridge.CHRRomSize = (8192*cartridge.Header[5]);
+			std::cout<<"CHR_ROM Size: "<<std::dec<<(int)cartridge.CHRRomSize<<"bytes"<<std::endl;
 
 			// Get the size of the PRG_RAM
+			cartridge.PRGRamSize = (8192*cartridge.Header[8]);
+			if (cartridge.PRGRamSize == 0)
+				cartridge.PRGRamSize = 8192;
+
+			std::cout<<"PRG_RAM Size: "<<std::dec<<(int)cartridge.PRGRamSize<<"bytes"<<std::endl;
+
+			// Detect cartridge Region
+			unsigned char tmpregion =  cartridge.Header[10] << 6;
+
+			tmpregion = tmpregion >> 6;
+
+			std::cout<<"Cartridge Region: ";
+
+			if (tmpregion == 0)
+				{
+					cartridge.Region = CartRegion::NTSC;
+					std::cout<<"NTSC"<<std::endl;
+				}
+			else if (tmpregion == 2)
+			{
+				cartridge.Region = CartRegion::PAL;
+				std::cout<<"PAL"<<std::endl;
+			}
+			else
+			{
+				cartridge.Region = CartRegion::Dual;
+				std::cout<<"Dual"<<std::endl;
+			}
 
 
 			std::cout<<"Error: Support for iNES07 not yet implemented."<<std::endl;
@@ -177,7 +209,7 @@ void MemoryManager::WriteRAM(unsigned short Location, unsigned char Value)
 
 	// Reduce the location value to its "base" value, and then we can write them all at once to all mirrored locations.
 	while(Location > 0x07FF)
-		Location-=0x800;
+		Location-=0x800; // This could be done in a nicer way with no loop - perhaps fix later.
 
 	#ifdef TestingRAMWrapping
 	std::cout<<"$"<<std::hex<<(int)Location<<" = "<<(int) Value<<std::endl;
