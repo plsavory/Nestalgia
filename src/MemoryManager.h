@@ -13,6 +13,11 @@ struct Cartridge
 	unsigned char InstROM[8192];
 	unsigned char PROM[32];
 	FileType FileFormat;
+	int PRGRomSize;
+	int CHRRomSize;
+	int PRGRamSize;
+	CartRegion Region;
+	bool TrainerPresent;
 };
 
 class MemoryManager

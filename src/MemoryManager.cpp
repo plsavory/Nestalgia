@@ -108,6 +108,26 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 		}
 		case FileType::iNES:
 		{
+			// Print text if the appropriate header text is found at the start of the ROM - if not perhaps print out a warning later.
+			if (cartridge.Header[0] == 0x4E && cartridge.Header[1] == 0x45 && cartridge.Header[2] == 0x53 && cartridge.Header[3] == 0x1A)
+				std::cout<<"NES ROM Header Found"<<std::endl;
+
+			// Find out if there is a trainer attached to the ROM or not
+			cartridge.TrainerPresent = ((cartridge.Header[6] >> 1) & 1);
+			if (cartridge.TrainerPresent)
+				std::cout<<"ROM has a trainer attached."<<std::endl;
+			else
+				std::cout<<"ROM does not have a trainer attached."<<std::endl;
+
+			// Store the mapper ID
+
+			// Get the size of the PRG_ROM
+
+			// Get the size of the CHRRom
+
+			// Get the size of the PRG_RAM
+
+
 			std::cout<<"Error: Support for iNES07 not yet implemented."<<std::endl;
 			return -1;
 		}
