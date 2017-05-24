@@ -106,7 +106,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlags() == 0x0);
 	testCPU.SetFlag(Flag::Sign,1);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
-	assert(testCPU.GetFlags() == 1);
+	assert(testCPU.GetFlags() == 128);
 	testCPU.SetFlag(Flag::Sign,0);
 
 	// Sequentially set or clear each flag and then make sure that the others retain their values
@@ -129,7 +129,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == false);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 0x1);
+	assert(testCPU.GetFlags() == 128);
 
 	testCPU.SetFlag(Flag::Overflow,1);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -140,7 +140,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == false);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 0x3);
+	assert(testCPU.GetFlags() == 192);
 
 	testCPU.SetFlag(Flag::Unused,1);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -151,7 +151,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == false);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 0x7);
+	assert(testCPU.GetFlags() == 224);
 
 	testCPU.SetFlag(Flag::SInterrupt,1);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -162,7 +162,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == false);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 0xF);
+	assert(testCPU.GetFlags() == 240);
 
 	testCPU.SetFlag(Flag::BCDMode,1);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -173,7 +173,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == false);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 31);
+	assert(testCPU.GetFlags() == 248);
 
 	testCPU.SetFlag(Flag::EInterrupt,1);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -184,7 +184,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 63);
+	assert(testCPU.GetFlags() == 252);
 
 	testCPU.SetFlag(Flag::Zero,1);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -195,7 +195,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == true);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 127);
+	assert(testCPU.GetFlags() == 254);
 
 	testCPU.SetFlag(Flag::Carry,1);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -217,7 +217,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == true);
 	assert(testCPU.GetFlag(Flag::Carry) == true);
-	assert(testCPU.GetFlags() == 239);
+	assert(testCPU.GetFlags() == 247);
 
 	testCPU.SetFlag(Flag::Overflow,0);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -228,7 +228,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == true);
 	assert(testCPU.GetFlag(Flag::Carry) == true);
-	assert(testCPU.GetFlags() == 237);
+	assert(testCPU.GetFlags() == 183);
 
 	testCPU.SetFlag(Flag::Zero,0);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -239,7 +239,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == true);
-	assert(testCPU.GetFlags() == 173);
+	assert(testCPU.GetFlags() == 181);
 
 	testCPU.SetFlag(Flag::Unused,0);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -250,7 +250,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == true);
-	assert(testCPU.GetFlags() == 169);
+	assert(testCPU.GetFlags() == 149);
 
 	testCPU.SetFlag(Flag::SInterrupt,0);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -261,7 +261,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == true);
-	assert(testCPU.GetFlags() == 161);
+	assert(testCPU.GetFlags() == 133);
 
 	testCPU.SetFlag(Flag::Carry,0);
 	assert(testCPU.GetFlag(Flag::Sign) == true);
@@ -272,7 +272,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 33);
+	assert(testCPU.GetFlags() == 132);
 
 	testCPU.SetFlag(Flag::Sign,0);
 	assert(testCPU.GetFlag(Flag::Sign) == false);
@@ -283,7 +283,7 @@ bool UnitTestClass::TestCPUFlags()
 	assert(testCPU.GetFlag(Flag::EInterrupt) == true);
 	assert(testCPU.GetFlag(Flag::Zero) == false);
 	assert(testCPU.GetFlag(Flag::Carry) == false);
-	assert(testCPU.GetFlags() == 32);
+	assert(testCPU.GetFlags() == 4);
 
 	testCPU.SetFlag(Flag::EInterrupt,0);
 	assert(testCPU.GetFlag(Flag::Sign) == false);

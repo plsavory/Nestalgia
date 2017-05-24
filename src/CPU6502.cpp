@@ -30,6 +30,7 @@ void CPU6502::Reset()
 	rY = 0x0;
 	rA = 0x0;
 	pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
+	sp = 0xFF; // Set the stack pointer
 
 	myState = CPUState::Running;
 }
@@ -175,6 +176,53 @@ void CPU6502::Execute()
 	// Attempt to execute the opcode
 	switch (opcode)
 	{
+		// LD_IMM instructions
+		case LDA_IMM:
+			rA = LD(NB());
+			CyclesRemain = 2;
+			currentInst = "LDA_IMM";
+		break;
+		case LDX_IMM:
+			rX = LD(NB());
+			CyclesRemain = 2;
+			currentInst = "LDX_IMM";
+		break;
+		case LDY_IMM:
+			rY = LD(NB());
+			CyclesRemain = 2;
+			currentInst = "LDY_IMM";
+		break;
+		// Transfer instructions
+		case TAX:
+			rX = LD(rA);
+			CyclesRemain = 2;
+			currentInst = "TAX";
+		break;
+		case TAY:
+			rY = LD(rA);
+			CyclesRemain = 2;
+			currentInst = "TAY";
+		break;
+		case TXA:
+			rA = LD(rX);
+			CyclesRemain = 2;
+			currentInst = "TXA";
+		break;
+		case TYA:
+			rA = LD(rY);
+			CyclesRemain = 2;
+			currentInst = "TYA";
+		break;
+		case TSX:
+			rX = LD(sp);
+			CyclesRemain = 2;
+			currentInst = "TSX";
+		break;
+		case TXS:
+			sp = LD(rX);
+			CyclesRemain = 2;
+			currentInst = "TXS";
+		break;
 		// Clear Flag instructions
 		case CLC:
 			SetFlag(Flag::Carry,0);
@@ -240,7 +288,7 @@ void CPU6502::Execute()
 
 void CPU6502::PrintCPUStatus(std::string inst_name)
 {
-	std::cout<<std::hex<<"--- pc: $"<<(int)pc<<" --- A: $"<<(int)rA<<" iX: $"<<(int)rX<<" iY: $"<<(int)rY<<" Flags: $"<<(int)FlagRegister<<" --- "<<inst_name<<" --- "<<std::endl;
+	std::cout<<std::hex<<"--- pc: $"<<(int)pc<<" --- A: $"<<(int)rA<<" iX: $"<<(int)rX<<" iY: $"<<(int)rY<<" Flags: $"<<(int)FlagRegister<<" sp: $"<<(int)sp<<" --- "<<inst_name<<" --- "<<std::endl;
 }
 
 // Used for unit testing purposes...

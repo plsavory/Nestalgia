@@ -37,4 +37,6 @@ private:
 	void PrintCPUStatus(std::string inst_name);
 	MemoryManager *mainMemory;
 	int CyclesRemain = 0;
+	unsigned char sp;
+
 };
