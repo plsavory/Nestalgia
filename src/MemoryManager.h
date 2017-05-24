@@ -18,6 +18,7 @@ struct Cartridge
 	int PRGRamSize;
 	CartRegion Region;
 	bool TrainerPresent;
+	int Mapper;
 };
 
 class MemoryManager
@@ -38,6 +39,8 @@ public:
 private:
 	unsigned char MainMemory[0xFFFF];
 	void WriteRAM(unsigned short Location, unsigned char Value);
+	void WriteCartridge(unsigned short Location, unsigned char Value);
+	unsigned char ReadCartridge(unsigned short Location);
 	int CheckCartridge(Cartridge &cartridge);
 	Cartridge *mainCartridge;
 	MemoryMapper mapper;

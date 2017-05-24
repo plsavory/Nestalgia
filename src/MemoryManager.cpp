@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <vector>
 #include <iterator>
+#include <assert.h>
 
 #define TestingRAMWrapping
 
@@ -94,6 +95,26 @@ int MemoryManager::LoadFile(std::string FilePath)
 	{
 		return -1;
 	}
+	else
+	{
+
+		// Trainers are currently ignored - will need to add support for them when the program is more functional.
+
+		// Load the PRG_ROM into the correct location
+		int FileOffset = 17+(512*mainCartridge->TrainerPresent);
+		int PRGOffset = 0;
+
+		while (PRGOffset<=mainCartridge->PRGRomSize)
+		{
+			mainCartridge->pROM[PRGOffset] = tempStorage[FileOffset+PRGOffset];
+			//std::cout<<std::hex<<(0x4020 + PRGOffset)<<":"<<std::hex<<(int)mainCartridge->pROM[PRGOffset]<<std::endl;
+			PRGOffset++;
+		}
+
+		assert(mainCartridge->pROM[0] == 0xf5);
+
+		// Load the CHR_ROM into the correct location
+	}
 
 	std::cout<<"ROM File loaded successfully."<<std::endl;
 	return 0;
@@ -123,6 +144,14 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 
 			// Store the mapper ID
 
+			// Remove bits we don't care about from both...
+			unsigned char upper  = cartridge.Header[6] >> 4;
+			unsigned char lower = cartridge.Header[6] >> 4;
+			unsigned short mapper = (upper << 4) + lower;
+
+			cartridge.Mapper = mapper;
+
+			std::cout<<"Mapper found: "<<std::dec<<(int)mapper<<std::endl;
 			// Get the size of the PRG_ROM
 			cartridge.PRGRomSize = (16384*cartridge.Header[4]);
 			std::cout<<"PRG_ROM Size: "<<std::dec<<(int)cartridge.PRGRomSize<<"bytes"<<std::endl;
@@ -161,9 +190,7 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 				std::cout<<"Dual"<<std::endl;
 			}
 
-
-			std::cout<<"Error: Support for iNES07 not yet implemented."<<std::endl;
-			return -1;
+			return 0; // Cartridge is processed and checked out - continue to load
 		}
 		case FileType::iNESOriginal:
 		{
@@ -193,8 +220,34 @@ void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 	4020-FFFF: Cartridge (All ROM + RAM chips on cartridge as well as other hardware)
 	*/
 
+	if (Location >= 0x4020)
+		WriteCartridge(Location,Value);
+
 	if (Location <= 0x1FFF)
 		WriteRAM(Location,Value); // CPU is trying to write to RAM, so handle this here...
+}
+
+void MemoryManager::WriteCartridge(unsigned short Location, unsigned char Value)
+{
+	// Write to the cartridge - depending on the mapper being used this process will vary
+	// Only available for cartridges which include RAM on them.
+
+	switch(mainCartridge->Mapper)
+	{
+		default:
+			return; // Return if no mapper here matches the cartridge - you can't write to an NROM cart as they include no RAM.
+	}
+}
+
+unsigned char MemoryManager::ReadCartridge(unsigned short Location)
+{
+	// Read from the cartridge - depending on the mapper being used this process will vary
+	switch (mainCartridge->Mapper)
+	{
+		default:
+		std::cout<<"CPU tried to read using an unsupported mapper (Why/how is the emulator even running?)"<<std::endl;
+		return 0x0;
+	}
 }
 
 void MemoryManager::WriteRAM(unsigned short Location, unsigned char Value)
@@ -227,7 +280,25 @@ void MemoryManager::WriteRAM(unsigned short Location, unsigned char Value)
 
 unsigned char MemoryManager::ReadMemory(unsigned short Location)
 {
-	return MainMemory[Location];
+	/*
+	NES Memory Map:
+	0000-1FFF: RAM (+ Mirrored RAM)
+	2000-3FFF: PPU Registers (Mirrored every 8 bytes)
+	4000-4017: APU + I/O registers
+	4018-401F: APU + I/O Functionality (usually disabled)
+	4020-FFFF: Cartridge (All ROM + RAM chips on cartridge as well as other hardware)
+	*/
+
+	if (Location <=0x1FFF)
+	{
+		return MainMemory[Location];
+	}
+
+	if (Location >= 0x4020)
+	{
+		return ReadCartridge(Location);
+	}
+	return 0x0;
 }
 
 // These need access to the current MemoryManager state, so delare them as class functions
