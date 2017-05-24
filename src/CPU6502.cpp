@@ -21,6 +21,17 @@ CPU6502::~CPU6502()
 }
 
 
+void CPU6502::Reset()
+{
+	// Should always be called before starting emulation (Sets the program counter to the appropriate place)
+	myState = CPUState::Running;
+	FlagRegister = 0x0; // Initialize the flags register
+	rA, rX, rY = 0x0;
+	pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
+
+	myState = CPUState::Running;
+}
+
 void CPU6502::SetFlag(Flag flag, bool val)
 {
 	// Sets a specific flag to true or false depending on the value of "val"
@@ -158,7 +169,7 @@ void CPU6502::Execute()
 	switch (opcode)
 	{
 		default:
-		std::cout<<"CPU-Error: Unknown opcode: $" << std::hex << (int)opcode << std::endl;
+		std::cout<<"CPU-Error: Unknown opcode: $" << std::hex << (int)opcode << " at: "<<(int)pc<< std::endl;
 		myState = CPUState::Error;
 		break;
 	}

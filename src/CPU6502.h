@@ -27,6 +27,7 @@ public:
 	unsigned char SBC(unsigned char value);
 	unsigned short answer16;
 	void Execute();
+	void Reset();
 private:
 	unsigned char FlagRegister;
 	unsigned short pc;

@@ -101,17 +101,15 @@ int MemoryManager::LoadFile(std::string FilePath)
 		// Trainers are currently ignored - will need to add support for them when the program is more functional.
 
 		// Load the PRG_ROM into the correct location
-		int FileOffset = 17+(512*mainCartridge->TrainerPresent);
+		int FileOffset = 16+(512*mainCartridge->TrainerPresent);
 		int PRGOffset = 0;
 
-		while (PRGOffset<=mainCartridge->PRGRomSize)
+		while (PRGOffset<mainCartridge->PRGRomSize)
 		{
 			mainCartridge->pROM[PRGOffset] = tempStorage[FileOffset+PRGOffset];
-			//std::cout<<std::hex<<(0x4020 + PRGOffset)<<":"<<std::hex<<(int)mainCartridge->pROM[PRGOffset]<<std::endl;
+			//std::cout<<std::hex<<PRGOffset<<":"<<std::hex<<(int)mainCartridge->pROM[PRGOffset]<<std::endl;
 			PRGOffset++;
 		}
-
-		assert(mainCartridge->pROM[0] == 0xf5);
 
 		// Load the CHR_ROM into the correct location
 	}
@@ -244,6 +242,9 @@ unsigned char MemoryManager::ReadCartridge(unsigned short Location)
 	// Read from the cartridge - depending on the mapper being used this process will vary
 	switch (mainCartridge->Mapper)
 	{
+		case 0:
+		return ReadNROM(Location);
+		break;
 		default:
 		std::cout<<"CPU tried to read using an unsupported mapper (Why/how is the emulator even running?)"<<std::endl;
 		return 0x0;
@@ -300,6 +301,8 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location)
 	}
 	return 0x0;
 }
+
+
 
 // These need access to the current MemoryManager state, so delare them as class functions
 unsigned short MemoryManager::IN(unsigned char Lo, unsigned char Hi)

@@ -20,6 +20,7 @@ void MainSystem::Execute() {
   // This will be the function which calls the main loop of the emulator - handle timings for the hardware here.
   std::cout<<"CPU-Start"<<std::endl;
 
+    mainCPU->Reset();
   while (mainCPU->myState == CPUState::Running)
     mainCPU->Execute();
 }

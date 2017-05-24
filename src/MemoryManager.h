@@ -40,10 +40,13 @@ private:
 	unsigned char MainMemory[0xFFFF];
 	void WriteRAM(unsigned short Location, unsigned char Value);
 	void WriteCartridge(unsigned short Location, unsigned char Value);
+	unsigned short WrapMemory(unsigned short Location, unsigned short WrapValue);
 	unsigned char ReadCartridge(unsigned short Location);
 	int CheckCartridge(Cartridge &cartridge);
 	Cartridge *mainCartridge;
 	MemoryMapper mapper;
+	// Mapper functions
+	unsigned char ReadNROM(unsigned short Location);
 };
 
 /*
