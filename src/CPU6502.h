@@ -34,5 +34,7 @@ private:
 	unsigned short dataoffset; // Increments as we access data
 	unsigned short jumpoffset; // Used to tell the CPU where to jump next
 	unsigned char NB();
+	void PrintCPUStatus(std::string inst_name);
 	MemoryManager *mainMemory;
+	int CyclesRemain = 0;
 };

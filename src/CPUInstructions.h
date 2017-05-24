@@ -198,15 +198,16 @@
 
 namespace M6502
 {
+
 	enum Flag: unsigned char {
-		Sign = 1 << 0,
-		Overflow = 1 << 1,
-		Unused = 1 << 2,
-		SInterrupt = 1 << 3,
-		BCDMode = 1 << 4,
-		EInterrupt = 1 << 5,
-		Zero = 1 << 6,
-		Carry = 1 << 7
+		Carry = 1 << 0,
+		Zero = 1 << 1,
+		EInterrupt = 1 << 2, // Disables interrupts (if set)
+		BCDMode = 1 << 3,
+		SInterrupt = 1 << 4, // Set when a BRK instruction is executed
+		Unused = 1 << 5,
+		Overflow = 1 << 6,
+		Sign = 1 << 7
 	};
 
 	enum CPUState {Running,Halt,Interrupt,Stopped,Error,WaitForInterrupt};

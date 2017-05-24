@@ -3,7 +3,7 @@
 #include "CPU6502.h"
 #include <cmath>
 
-#define PrintInstructionExecution
+#define PRINTCPUSTATUS
 
 CPU6502::CPU6502(MemoryManager &mManager)
 {
@@ -26,7 +26,9 @@ void CPU6502::Reset()
 	// Should always be called before starting emulation (Sets the program counter to the appropriate place)
 	myState = CPUState::Running;
 	FlagRegister = 0x0; // Initialize the flags register
-	rA, rX, rY = 0x0;
+	rX = 0x0;
+	rY = 0x0;
+	rA = 0x0;
 	pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
 
 	myState = CPUState::Running;
@@ -161,6 +163,11 @@ unsigned char CPU6502::NB()
 
 void CPU6502::Execute()
 {
+	// Debug reasons
+	std::string currentInst = "";
+
+	// Handle interrupts if neccesary (add this later)
+
 	// Fetch the next opcode
 	unsigned char opcode = NB();
 	jumpoffset = 0;
@@ -168,11 +175,55 @@ void CPU6502::Execute()
 	// Attempt to execute the opcode
 	switch (opcode)
 	{
+		// Clear Flag instructions
+		case CLC:
+			SetFlag(Flag::Carry,0);
+			CyclesRemain = 2;
+			currentInst = "CLC";
+		break;
+		case CLV:
+			SetFlag(Flag::Overflow,0);
+			CyclesRemain = 2;
+			currentInst = "CLV";
+		break;
+		case CLD:
+			SetFlag(Flag::BCDMode,0);
+			CyclesRemain = 2;
+			currentInst = "CLD";
+		break;
+		case CLI:
+			SetFlag(Flag::EInterrupt,0);
+			CyclesRemain = 2;
+			currentInst = "CLI";
+		break;
+		// Set Flag instructions
+		case SEC:
+			SetFlag(Flag::Carry,1);
+			CyclesRemain = 2;
+			currentInst = "SEC";
+		break;
+		case SED:
+			SetFlag(Flag::BCDMode,1);
+			CyclesRemain = 2;
+			currentInst = "SED";
+		break;
+		case SEI:
+			SetFlag(Flag::EInterrupt,1);
+			CyclesRemain = 2;
+			currentInst = "SEI";
+		break;
 		default:
 		std::cout<<"CPU-Error: Unknown opcode: $" << std::hex << (int)opcode << " at: "<<(int)pc<< std::endl;
 		myState = CPUState::Error;
 		break;
 	}
+
+	// Print the CPU state if the option is enabled
+
+	#ifdef PRINTCPUSTATUS
+	if (currentInst != "")
+		PrintCPUStatus(currentInst);
+	#endif
 
 	// If we have not jumped or branched, increment the pc
 	if (jumpoffset == 0)
@@ -182,6 +233,14 @@ void CPU6502::Execute()
 
 	// Reset the dataoffset
 	dataoffset = 0;
+
+	// Reduce the remaining cycles variable as we've just done one (put this outside an if statement later to enable cycle accuracy when it is implemented).
+	CyclesRemain--;
+}
+
+void CPU6502::PrintCPUStatus(std::string inst_name)
+{
+	std::cout<<std::hex<<"--- pc: $"<<(int)pc<<" --- A: $"<<(int)rA<<" iX: $"<<(int)rX<<" iY: $"<<(int)rY<<" Flags: $"<<(int)FlagRegister<<" --- "<<inst_name<<" --- "<<std::endl;
 }
 
 // Used for unit testing purposes...
