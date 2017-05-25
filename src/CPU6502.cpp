@@ -171,11 +171,28 @@ void CPU6502::Execute()
 
 	// Fetch the next opcode
 	unsigned char opcode = NB();
+	bool pboundarypassed = 0;
 	jumpoffset = 0;
 
 	// Attempt to execute the opcode
 	switch (opcode)
 	{
+		// LD_ZP instructions
+		case LDA_ZP:
+			rA = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+			currentInst = "LDA_ZP";
+		break;
+		case LDX_ZP:
+			rX = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+			currentInst = "LDX_ZP";
+		break;
+		case LDY_ZP:
+			rY = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+			currentInst = "LDY_ZP";
+		break;
 		// LD_IMM instructions
 		case LDA_IMM:
 			rA = LD(NB());
@@ -191,6 +208,77 @@ void CPU6502::Execute()
 			rY = LD(NB());
 			CyclesRemain = 2;
 			currentInst = "LDY_IMM";
+		break;
+		// LD_AB instructions
+		case LDA_AB:
+			b1 = NB(); // Get first byte of next address
+			rA = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+			currentInst = "LDA_AB";
+		break;
+		case LDX_AB:
+			b1 = NB();
+			rX = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+			currentInst = "LDX_AB";
+		break;
+		case LDY_AB:
+			b1 = NB();
+			rY = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+			currentInst = "LDY_AB";
+		break;
+		// LD_ABX/Y instructions
+		case LDA_ABX:
+			b1 = NB();
+			rA = LD(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+			currentInst = "LDA_ABX";
+		break;
+		case LDA_ABY:
+			b1 = NB();
+			rA = LD(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+			currentInst = "LDA_ABY";
+		break;
+		case LDX_ABY:
+			b1 = NB();
+			rX = LD(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+			currentInst = "LDX_ABY";
+		break;
+		case LDY_ABX:
+			b1 = NB();
+			rY = LD(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+			currentInst = "LDY_ABX";
+		break;
+		// LD_ZPX instructions
+		case LDA_ZPX:
+			rA = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
+			CyclesRemain = 4;
+			currentInst = "LDA_ZPX";
+		break;
+		case LDX_ZPY:
+			rX = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rY)));
+			CyclesRemain = 4;
+			currentInst = "LDX_ZPY";
+		break;
+		case LDY_ZPX:
+			rY = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
+			CyclesRemain = 4;
+			currentInst = "LDY_ZPX";
+		break;
+		// LDA_IN instructions
+		case LDA_INX:
+			rA = LD(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
+			CyclesRemain = 6;
+			currentInst = "LDA_INX";
+		break;
+		case LDA_INY:
+			rA = LD(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
+			CyclesRemain = 5+pboundarypassed;
+			currentInst = "LDA_INY";
 		break;
 		// Transfer instructions
 		case TAX:
@@ -219,7 +307,7 @@ void CPU6502::Execute()
 			currentInst = "TSX";
 		break;
 		case TXS:
-			sp = LD(rX);
+			sp = rX; // Does not effect flags
 			CyclesRemain = 2;
 			currentInst = "TXS";
 		break;

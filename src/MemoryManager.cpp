@@ -325,6 +325,7 @@ unsigned short MemoryManager::INdY(unsigned char rY, unsigned char Loc)
 unsigned short MemoryManager::AB(unsigned char Lo, unsigned char Hi)
 {
 	// Used for Absolute writes/reads
+	std::cout<<"Reading Location: "<<std::hex<<(int)(unsigned short)Lo + (unsigned short)(Hi << 8)<<std::endl;
 	return ((unsigned short)Lo + (unsigned short)(Hi << 8));
 }
 

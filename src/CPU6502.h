@@ -29,6 +29,7 @@ public:
 	void Execute();
 	void Reset();
 private:
+	unsigned char b1;
 	unsigned char FlagRegister;
 	unsigned short pc;
 	unsigned short dataoffset; // Increments as we access data
