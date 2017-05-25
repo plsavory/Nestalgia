@@ -32,12 +32,14 @@ private:
 	unsigned char b1;
 	unsigned char FlagRegister;
 	unsigned short pc;
-	unsigned short dataoffset; // Increments as we access data
+	unsigned short dataoffset; // Causes the pc to be incremented at the end of an instruction
 	unsigned short jumpoffset; // Used to tell the CPU where to jump next
 	unsigned char NB();
+	void JMP(unsigned short Location);
+	void branch(bool value);
 	void PrintCPUStatus(std::string inst_name);
 	MemoryManager *mainMemory;
 	int CyclesRemain = 0;
 	unsigned char sp;
-
+	bool pboundarypassed;
 };

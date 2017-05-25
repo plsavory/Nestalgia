@@ -171,7 +171,7 @@ void CPU6502::Execute()
 
 	// Fetch the next opcode
 	unsigned char opcode = NB();
-	bool pboundarypassed = 0;
+ 	pboundarypassed = 0;
 	jumpoffset = 0;
 
 	// Attempt to execute the opcode
@@ -280,6 +280,39 @@ void CPU6502::Execute()
 			CyclesRemain = 5+pboundarypassed;
 			currentInst = "LDA_INY";
 		break;
+		// Branch instructions
+		case BCC:
+			branch(!GetFlag(Flag::Carry));
+			currentInst = "BCC";
+		break;
+		case BCS:
+			branch(GetFlag(Flag::Carry));
+			currentInst = "BCS";
+		break;
+		case BEQ:
+			branch(GetFlag(Flag::Zero));
+			currentInst = "BEQ";
+		break;
+		case BMI:
+			branch(GetFlag(Flag::Sign));
+			currentInst = "BMI";
+		break;
+		case BNE:
+			branch(!GetFlag(Flag::Zero));
+			currentInst = "BNE";
+		break;
+		case BPL:
+			branch(!GetFlag(Flag::Sign));
+			currentInst = "BPL";
+		break;
+		case BVC:
+			branch(!GetFlag(Flag::Overflow));
+			currentInst = "BVC";
+		break;
+		case BVS:
+			branch(GetFlag(Flag::Overflow));
+			currentInst = "BVS";
+		break;
 		// Transfer instructions
 		case TAX:
 			rX = LD(rA);
@@ -348,6 +381,20 @@ void CPU6502::Execute()
 			CyclesRemain = 2;
 			currentInst = "SEI";
 		break;
+		// JMP instructions
+		case JMP_AB:
+			b1 = NB();
+			JMP(mainMemory->AB(b1,NB()));
+			CyclesRemain = 3;
+			currentInst = "JMP_AB";
+		break;
+		case JMP_IN:
+		// Jump to the target address which is contained in the memory address after the byte.
+		b1 = NB();
+		JMP(mainMemory->IN(b1,NB()));
+		currentInst = "JMP_IN";
+		CyclesRemain = 5;
+		break;
 		default:
 		std::cout<<"CPU-Error: Unknown opcode: $" << std::hex << (int)opcode << " at: "<<(int)pc<< std::endl;
 		myState = CPUState::Error;
@@ -365,13 +412,28 @@ void CPU6502::Execute()
 	if (jumpoffset == 0)
 		pc += dataoffset;
 		else
-		pc += jumpoffset; // If jumpoffset is not 0, the pc will automatically move there for the next cycle - use this for jmp and branch operations.
+		pc = jumpoffset; // If jumpoffset is not 0, the pc will automatically move there for the next cycle - use this for jmp and branch operations.
 
 	// Reset the dataoffset
 	dataoffset = 0;
 
 	// Reduce the remaining cycles variable as we've just done one (put this outside an if statement later to enable cycle accuracy when it is implemented).
 	CyclesRemain--;
+}
+
+void CPU6502::JMP(unsigned short Location) {
+	// Jump to the specified address
+	jumpoffset = Location;
+}
+
+void CPU6502::branch(bool value)
+{
+	if(value)
+	{
+		dataoffset = NB(); // Dataoffset should = the byte after the instruction
+		CyclesRemain = 3+pboundarypassed;
+	}
+	else CyclesRemain = 2;
 }
 
 void CPU6502::PrintCPUStatus(std::string inst_name)
