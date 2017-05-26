@@ -336,6 +336,76 @@ void CPU6502::Execute()
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 7;
 		break;
+		// Store operations
+		case STA_ZP:
+			location = mainMemory->ZP(NB());
+			mainMemory->WriteMemory(location,rA);
+			CyclesRemain = 3;
+		break;
+		case STA_ZPX:
+			location = mainMemory->ZP(NB(),rX);
+			mainMemory->WriteMemory(location,rA);
+			CyclesRemain = 4;
+		break;
+		case STA_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			mainMemory->WriteMemory(location16,rA);
+			CyclesRemain = 4;
+		break;
+		case STA_ABX:
+			b1 = NB();
+			location16 = mainMemory->AB(rX,b1,NB());
+			mainMemory->WriteMemory(location16,rA);
+			CyclesRemain = 5;
+		break;
+		case STA_ABY:
+			b1 = NB();
+			location16 = mainMemory->AB(rY,b1,NB());
+			mainMemory->WriteMemory(location16,rA);
+			CyclesRemain = 5;
+		break;
+		case STA_INX:
+			location16 = mainMemory->INdX(rX,NB());
+			mainMemory->WriteMemory(location16,rA);
+			CyclesRemain = 6;
+		break;
+		case STA_INY:
+			location16 = mainMemory->INdY(rY,NB());
+			mainMemory->WriteMemory(location16,rA);
+			CyclesRemain = 6;
+		break;
+		case STX_ZP:
+			location = mainMemory->ZP(NB());
+			mainMemory->WriteMemory(location,rX);
+			CyclesRemain = 3;
+		break;
+		case STX_ZPY:
+			location = mainMemory->ZP(NB(),rY);
+			mainMemory->WriteMemory(location,rX);
+			CyclesRemain = 4;
+		break;
+		case STX_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			mainMemory->WriteMemory(location16,rX);
+			CyclesRemain = 4;
+		break;
+		case STY_ZP:
+			location = mainMemory->ZP(NB());
+			mainMemory->WriteMemory(location,rY);
+			CyclesRemain = 3;
+		break;
+		case STY_ZPX:
+			location = mainMemory->ZP(NB(),rX);
+			mainMemory->WriteMemory(location,rY);
+			CyclesRemain = 4;
+		break;
+		case STY_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			CyclesRemain = 4;
+		break;
 		// Branch instructions
 		case BCC:
 			branch(!GetFlag(Flag::Carry));
