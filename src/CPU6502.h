@@ -32,7 +32,7 @@ private:
 	unsigned char b1;
 	unsigned char FlagRegister;
 	unsigned short pc;
-	unsigned short dataoffset; // Causes the pc to be incremented at the end of an instruction
+	signed char dataoffset; // Causes the pc to be incremented at the end of an instruction
 	unsigned short jumpoffset; // Used to tell the CPU where to jump next
 	unsigned char NB();
 	void JMP(unsigned short Location);
@@ -42,4 +42,8 @@ private:
 	int CyclesRemain = 0;
 	unsigned char sp;
 	bool pboundarypassed;
+	unsigned char location;
+	unsigned short location16;
+	unsigned char result;
+	std::string InstName(unsigned char opcode);
 };

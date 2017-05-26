@@ -28,6 +28,7 @@ public:
 	~MemoryManager();
 	int LoadFile(std::string FilePath);
 	unsigned char ReadMemory(unsigned short Location);
+	unsigned char ReadMemory(unsigned short Location,bool Silent);
 	void WriteMemory(unsigned short Location, unsigned char Value);
 	unsigned short IN(unsigned char Lo, unsigned char Hi);
 	unsigned short INdX(unsigned char rX, unsigned char Loc);

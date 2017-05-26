@@ -29,7 +29,8 @@ void CPU6502::Reset()
 	rX = 0x0;
 	rY = 0x0;
 	rA = 0x0;
-	pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
+	//pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
+	pc = 0xC000;
 	sp = 0xFF; // Set the stack pointer
 
 	myState = CPUState::Running;
@@ -57,8 +58,8 @@ unsigned char CPU6502::AND(unsigned char value)
 {
 	// AND the value with the accumulator, and then set the flags accordingly and return the result.
 	unsigned char result = value & rA;
-	SetFlag(Flag::Zero, value == 0x0);
-	SetFlag(Flag::Sign, value > 0x7F);
+	SetFlag(Flag::Zero, result == 0x0);
+	SetFlag(Flag::Sign, result > 0x7F);
 	return result;
 }
 
@@ -165,7 +166,13 @@ unsigned char CPU6502::NB()
 void CPU6502::Execute()
 {
 	// Debug reasons
-	std::string currentInst = "";
+	unsigned char currentInst = mainMemory->ReadMemory(pc,1);
+
+	// Print the CPU's current status
+	#ifdef PRINTCPUSTATUS
+	if (currentInst) // if not null
+		PrintCPUStatus(InstName(currentInst));
+	#endif
 
 	// Handle interrupts if neccesary (add this later)
 
@@ -181,232 +188,254 @@ void CPU6502::Execute()
 		case LDA_ZP:
 			rA = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
 			CyclesRemain = 3;
-			currentInst = "LDA_ZP";
 		break;
 		case LDX_ZP:
 			rX = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
 			CyclesRemain = 3;
-			currentInst = "LDX_ZP";
 		break;
 		case LDY_ZP:
 			rY = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
 			CyclesRemain = 3;
-			currentInst = "LDY_ZP";
 		break;
 		// LD_IMM instructions
 		case LDA_IMM:
 			rA = LD(NB());
 			CyclesRemain = 2;
-			currentInst = "LDA_IMM";
 		break;
 		case LDX_IMM:
 			rX = LD(NB());
 			CyclesRemain = 2;
-			currentInst = "LDX_IMM";
 		break;
 		case LDY_IMM:
 			rY = LD(NB());
 			CyclesRemain = 2;
-			currentInst = "LDY_IMM";
 		break;
 		// LD_AB instructions
 		case LDA_AB:
 			b1 = NB(); // Get first byte of next address
 			rA = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
 			CyclesRemain = 4;
-			currentInst = "LDA_AB";
 		break;
 		case LDX_AB:
 			b1 = NB();
 			rX = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
 			CyclesRemain = 4;
-			currentInst = "LDX_AB";
 		break;
 		case LDY_AB:
 			b1 = NB();
 			rY = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
 			CyclesRemain = 4;
-			currentInst = "LDY_AB";
 		break;
 		// LD_ABX/Y instructions
 		case LDA_ABX:
 			b1 = NB();
 			rA = LD(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
 			CyclesRemain = 4+pboundarypassed;
-			currentInst = "LDA_ABX";
 		break;
 		case LDA_ABY:
 			b1 = NB();
 			rA = LD(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
 			CyclesRemain = 4+pboundarypassed;
-			currentInst = "LDA_ABY";
 		break;
 		case LDX_ABY:
 			b1 = NB();
 			rX = LD(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
 			CyclesRemain = 4+pboundarypassed;
-			currentInst = "LDX_ABY";
 		break;
 		case LDY_ABX:
 			b1 = NB();
 			rY = LD(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
 			CyclesRemain = 4+pboundarypassed;
-			currentInst = "LDY_ABX";
 		break;
 		// LD_ZPX instructions
 		case LDA_ZPX:
 			rA = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
 			CyclesRemain = 4;
-			currentInst = "LDA_ZPX";
 		break;
 		case LDX_ZPY:
 			rX = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rY)));
 			CyclesRemain = 4;
-			currentInst = "LDX_ZPY";
 		break;
 		case LDY_ZPX:
 			rY = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
 			CyclesRemain = 4;
-			currentInst = "LDY_ZPX";
 		break;
 		// LDA_IN instructions
 		case LDA_INX:
 			rA = LD(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
 			CyclesRemain = 6;
-			currentInst = "LDA_INX";
 		break;
 		case LDA_INY:
 			rA = LD(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
 			CyclesRemain = 5+pboundarypassed;
-			currentInst = "LDA_INY";
+		break;
+		// AND instructions
+		case AND_IMM:
+			rA = AND(NB());
+			CyclesRemain = 2;
+		break;
+		case AND_ZP:
+			rA = AND(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case AND_ZPX:
+			rA = AND(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
+			CyclesRemain = 4;
+		break;
+		case AND_AB:
+			b1 = NB();
+			rA = AND(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+		break;
+		case AND_ABX:
+			b1 = NB();
+			rA = AND(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case AND_ABY:
+			b1 = NB();
+			rA = AND(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case AND_INX:
+			rA = AND(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
+			CyclesRemain = 6;
+		break;
+		case AND_INY:
+			rA = AND(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
+			CyclesRemain = 5+pboundarypassed;
+		break;
+		// ASL instructions
+		case ASL_ACC:
+			rA = ASL(rA);
+			CyclesRemain = 2;
+		break;
+		case ASL_ZP:
+			location = mainMemory->ZP(NB());
+			result = ASL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 5;
+		break;
+		case ASL_ZPX:
+			location = mainMemory->ZP(NB(),rX);
+			result = ASL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 6;
+		break;
+		case ASL_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			result = ASL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 6;
+		break;
+		case ASL_ABX:
+			b1 = NB();
+			location16 = mainMemory->AB(rX,b1,NB());
+			result = ASL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 7;
 		break;
 		// Branch instructions
 		case BCC:
 			branch(!GetFlag(Flag::Carry));
-			currentInst = "BCC";
 		break;
 		case BCS:
 			branch(GetFlag(Flag::Carry));
-			currentInst = "BCS";
 		break;
 		case BEQ:
 			branch(GetFlag(Flag::Zero));
-			currentInst = "BEQ";
 		break;
 		case BMI:
 			branch(GetFlag(Flag::Sign));
-			currentInst = "BMI";
 		break;
 		case BNE:
 			branch(!GetFlag(Flag::Zero));
-			currentInst = "BNE";
 		break;
 		case BPL:
 			branch(!GetFlag(Flag::Sign));
-			currentInst = "BPL";
 		break;
 		case BVC:
 			branch(!GetFlag(Flag::Overflow));
-			currentInst = "BVC";
 		break;
 		case BVS:
 			branch(GetFlag(Flag::Overflow));
-			currentInst = "BVS";
 		break;
 		// Transfer instructions
 		case TAX:
 			rX = LD(rA);
 			CyclesRemain = 2;
-			currentInst = "TAX";
 		break;
 		case TAY:
 			rY = LD(rA);
 			CyclesRemain = 2;
-			currentInst = "TAY";
 		break;
 		case TXA:
 			rA = LD(rX);
 			CyclesRemain = 2;
-			currentInst = "TXA";
 		break;
 		case TYA:
 			rA = LD(rY);
 			CyclesRemain = 2;
-			currentInst = "TYA";
 		break;
 		case TSX:
 			rX = LD(sp);
 			CyclesRemain = 2;
-			currentInst = "TSX";
 		break;
 		case TXS:
 			sp = rX; // Does not effect flags
 			CyclesRemain = 2;
-			currentInst = "TXS";
 		break;
 		// Clear Flag instructions
 		case CLC:
 			SetFlag(Flag::Carry,0);
 			CyclesRemain = 2;
-			currentInst = "CLC";
 		break;
 		case CLV:
 			SetFlag(Flag::Overflow,0);
 			CyclesRemain = 2;
-			currentInst = "CLV";
 		break;
 		case CLD:
 			SetFlag(Flag::BCDMode,0);
 			CyclesRemain = 2;
-			currentInst = "CLD";
 		break;
 		case CLI:
 			SetFlag(Flag::EInterrupt,0);
 			CyclesRemain = 2;
-			currentInst = "CLI";
 		break;
 		// Set Flag instructions
 		case SEC:
 			SetFlag(Flag::Carry,1);
 			CyclesRemain = 2;
-			currentInst = "SEC";
 		break;
 		case SED:
 			SetFlag(Flag::BCDMode,1);
 			CyclesRemain = 2;
-			currentInst = "SED";
 		break;
 		case SEI:
 			SetFlag(Flag::EInterrupt,1);
 			CyclesRemain = 2;
-			currentInst = "SEI";
 		break;
 		// JMP instructions
 		case JMP_AB:
 			b1 = NB();
 			JMP(mainMemory->AB(b1,NB()));
 			CyclesRemain = 3;
-			currentInst = "JMP_AB";
 		break;
 		case JMP_IN:
 		// Jump to the target address which is contained in the memory address after the byte.
 		b1 = NB();
 		JMP(mainMemory->IN(b1,NB()));
-		currentInst = "JMP_IN";
 		CyclesRemain = 5;
 		break;
 		default:
-		std::cout<<"CPU-Error: Unknown opcode: $" << std::hex << (int)opcode << " at: "<<(int)pc<< std::endl;
+		if (InstName(opcode) != "UNKNOWN-OPCODE")
+			std::cout<<"CPU-Error: Handler not yet implemented: " << InstName(opcode) << " at: "<<(int)pc<< std::endl;
+			else
+			std::cout<<"CPU-Error: Unknown opcode: $" << std::hex << (int)opcode << " at: "<<(int)pc<< std::endl;
 		myState = CPUState::Error;
 		break;
 	}
-
-	// Print the CPU state if the option is enabled
-
-	#ifdef PRINTCPUSTATUS
-	if (currentInst != "")
-		PrintCPUStatus(currentInst);
-	#endif
 
 	// If we have not jumped or branched, increment the pc
 	if (jumpoffset == 0)
@@ -430,7 +459,19 @@ void CPU6502::branch(bool value)
 {
 	if(value)
 	{
-		dataoffset = NB(); // Dataoffset should = the byte after the instruction
+		unsigned char branchloc = NB();
+		//Get the sign of the value
+		bool sign = (branchloc>0x7F);
+		branchloc = branchloc << 1;
+		branchloc = branchloc >> 1;
+
+		if (sign)
+			dataoffset = -branchloc;
+			else
+			dataoffset = branchloc;
+
+		 // Dataoffset should = the byte after the instruction
+		//std::cout<<"Branching to: "<<std::dec<<(int) dataoffset<<std::endl;
 		CyclesRemain = 3+pboundarypassed;
 	}
 	else CyclesRemain = 2;
@@ -459,4 +500,466 @@ unsigned char CPU6502::GetX()
 unsigned char CPU6502::GetY()
 {
 	return rY;
+}
+
+std::string CPU6502::InstName(unsigned char opcode) {
+	// Used for debugging purposes, just spits out the name of the current opcode - makes it easier to compare CPU logs with other emulators for debugging.
+	std::string RetVal;
+	switch (opcode)
+	{
+		case ADC_IMM:
+		RetVal = "ADC_IMM";
+		break;
+		case ADC_ZP:
+		RetVal = "ADC_ZP";
+		break;
+		case ADC_ZPX:
+		RetVal = "ADC_ZPX";
+		break;
+		case ADC_AB:
+		RetVal = "ADC_AB";
+		break;
+		case ADC_ABX:
+		RetVal = "ADC_ABX";
+		break;
+		case ADC_ABY:
+		RetVal = "ADC_ABY";
+		break;
+		case ADC_INX:
+		RetVal = "ADC_INX";
+		break;
+		case ADC_INY:
+		RetVal = "ADC_INY";
+		break;
+		case AND_IMM:
+		RetVal = "AND_IMM";
+		break;
+		case AND_ZP:
+		RetVal = "AND_ZP";
+		break;
+		case AND_ZPX:
+		RetVal = "AND_ZPX";
+		break;
+		case AND_AB:
+		RetVal = "AND_AB";
+		break;
+		case AND_ABX:
+		RetVal = "AND_ABX";
+		break;
+		case AND_ABY:
+		RetVal = "AND_ABY";
+		break;
+		case AND_INX:
+		RetVal = "AND_INX";
+		break;
+		case AND_INY:
+		RetVal = "AND_INY";
+		break;
+		case ASL_ACC:
+		RetVal = "ASL_ACC";
+		break;
+		case ASL_ZP:
+		RetVal = "ASL_ZP";
+		break;
+		case ASL_ZPX:
+		RetVal = "ASL_ZPX";
+		break;
+		case ASL_AB:
+		RetVal = "ASL_AB";
+		break;
+		case ASL_ABX:
+		RetVal = "ASL_ABX";
+		break;
+		case BCC:
+		RetVal = "BCC";
+		break;
+		case BCS:
+		RetVal = "BCS";
+		break;
+		case BEQ:
+		RetVal = "BEQ";
+		break;
+		case BMI:
+		RetVal = "BMI";
+		break;
+		case BNE:
+		RetVal = "BNE";
+		break;
+		case BPL:
+		RetVal = "BPL";
+		break;
+		case BVC:
+		RetVal = "BVC";
+		break;
+		case BVS:
+		RetVal = "BVS";
+		break;
+		case BIT_ZP:
+		RetVal = "BIT_ZP";
+		break;
+		case BIT_AB:
+		RetVal = "BIT_AB";
+		break;
+		case CLC:
+		RetVal = "CLC";
+		break;
+		case CLD:
+		RetVal = "CLD";
+		break;
+		case CLI:
+		RetVal = "CLI";
+		break;
+		case CLV:
+		RetVal = "CLV";
+		break;
+		case CMP_IMM:
+		RetVal = "CMP_IMM";
+		break;
+		case CMP_ZP:
+		RetVal = "CMP_ZP";
+		break;
+		case CMP_ZPX:
+		RetVal = "CMP_ZPX";
+		break;
+		case CMP_AB:
+		RetVal = "CMP_AB";
+		break;
+		case CMP_ABX:
+		RetVal = "CMP_ABX";
+		break;
+		case CMP_ABY:
+		RetVal = "CMP_ABY";
+		break;
+		case CMP_INX:
+		RetVal = "CMP_INX";
+		break;
+		case CMP_INY:
+		RetVal = "CMP_INY";
+		break;
+		case CPX_IMM:
+		RetVal = "CPX_IMM";
+		break;
+		case CPX_ZP:
+		RetVal = "CPX_ZP";
+		break;
+		case CPX_AB:
+		RetVal = "CPX_AB";
+		break;
+		case CPY_IMM:
+		RetVal = "CPY_IMM";
+		break;
+		case CPY_ZP:
+		RetVal = "CPY_ZP";
+		break;
+		case CPY_AB:
+		RetVal = "CPY_AB";
+		break;
+		case DEC_ZP:
+		RetVal = "DEC_ZP";
+		break;
+		case DEC_ZPX:
+		RetVal = "DEC_ZPX";
+		break;
+		case DEC_AB:
+		RetVal = "DEC_AB";
+		break;
+		case DEC_ABX:
+		RetVal = "DEC_ABX";
+		break;
+		case DEC_X:
+		RetVal = "DEC_X";
+		break;
+		case DEC_Y:
+		RetVal = "DEC_Y";
+		break;
+		case EOR_IMM:
+		RetVal = "EOR_IMM";
+		break;
+		case EOR_ZP:
+		RetVal = "EOR_ZP";
+		break;
+		case EOR_ZPX:
+		RetVal = "EOR_ZPX";
+		break;
+		case EOR_AB:
+		RetVal = "EOR_AB";
+		break;
+		case EOR_ABX:
+		RetVal = "EOR_ABX";
+		break;
+		case EOR_ABY:
+		RetVal = "EOR_ABY";
+		break;
+		case EOR_INX:
+		RetVal = "EOR_INX";
+		break;
+		case EOR_INY:
+		RetVal = "EOR_INY";
+		break;
+		case INC_ZP:
+		RetVal = "INC_ZP";
+		break;
+		case INC_ZPX:
+		RetVal = "INC_ZPX";
+		break;
+		case INC_AB:
+		RetVal = "INC_AB";
+		break;
+		case INC_ABX:
+		RetVal = "INC_ABX";
+		break;
+		case INX:
+		RetVal = "INX";
+		break;
+		case INY:
+		RetVal = "INY";
+		break;
+		case JMP_AB:
+		RetVal = "JMP_AB";
+		break;
+		case JMP_IN:
+		RetVal = "JMP_IN";
+		break;
+		case JSR:
+		RetVal = "JSR";
+		break;
+		case LDA_IMM:
+		RetVal = "LDA_IMM";
+		break;
+		case LDA_ZP:
+		RetVal = "LDA_ZP";
+		break;
+		case LDA_ZPX:
+		RetVal = "LDA_ZPX";
+		break;
+		case LDA_AB:
+		RetVal = "LDA_AB";
+		break;
+		case LDA_ABX:
+		RetVal = "LDA_ABX";
+		break;
+		case LDA_ABY:
+		RetVal = "LDA_ABY";
+		break;
+		case LDA_INX:
+		RetVal = "LDA_INX";
+		break;
+		case LDA_INY:
+		RetVal = "LDA_INY";
+		break;
+		case LDX_IMM:
+		RetVal = "LDX_IMM";
+		break;
+		case LDX_ZP:
+		RetVal = "LDX_ZP";
+		break;
+		case LDX_ZPY:
+		RetVal = "LDX_ZPY";
+		break;
+		case LDX_AB:
+		RetVal = "LDX_AB";
+		break;
+		case LDX_ABY:
+		RetVal = "LDX_ABY";
+		break;
+		case LDY_IMM:
+		RetVal = "LDY_IMM";
+		break;
+		case LDY_ZP:
+		RetVal = "LDY_ZP";
+		break;
+		case LDY_ZPX:
+		RetVal = "LDY_ZPX";
+		break;
+		case LDY_AB:
+		RetVal = "LDY_AB";
+		break;
+		case LDY_ABX:
+		RetVal = "LDY_ABX";
+		break;
+		case LSR_ACC:
+		RetVal = "LSR_A";
+		break;
+		case LSR_ZP:
+		RetVal = "LSR_ZP";
+		break;
+		case LSR_ZPX:
+		RetVal = "LSR_ZPX";
+		break;
+		case LSR_AB:
+		RetVal = "LSR_AB";
+		break;
+		case LSR_ABX:
+		RetVal = "LSR_ABX";
+		break;
+		case NOP:
+		RetVal = "NOP";
+		break;
+		case ORA_IMM:
+		RetVal = "ORA_IMM";
+		break;
+		case ORA_ZP:
+		RetVal = "ORA_ZP";
+		break;
+		case ORA_ZPX:
+		RetVal = "ORA_ZPX";
+		break;
+		case ORA_AB:
+		RetVal = "ORA_AB";
+		break;
+		case ORA_ABX:
+		RetVal = "ORA_ABX";
+		case ORA_ABY:
+		RetVal = "ORA_ABY";
+		break;
+		case ORA_INX:
+		RetVal = "ORA_INX";
+		break;
+		case ORA_INY:
+		RetVal = "ORA_INY";
+		break;
+		case PHA:
+		RetVal = "PHA";
+		break;
+		case PHP:
+		RetVal = "PHP";
+		break;
+		case PLA:
+		RetVal = "PLA";
+		break;
+		case PLS:
+		RetVal = "PLS";
+		break;
+		case ROL_ACC:
+		RetVal = "ROL_ACC";
+		break;
+		case ROL_ZP:
+		RetVal = "ROL_ZP";
+		break;
+		case ROL_ZPX:
+		RetVal = "ROL_ZPX";
+		break;
+		case ROL_AB:
+		RetVal = "ROL_AB";
+		break;
+		case ROL_ABX:
+		RetVal = "ROL_ABX";
+		break;
+		case ROR_ACC:
+		RetVal = "ROR_ACC";
+		break;
+		case ROR_ZP:
+		RetVal = "ROR_ZP";
+		break;
+		case ROR_ZPX:
+		RetVal = "ROR_ZPX";
+		break;
+		case ROR_AB:
+		RetVal = "ROR_AB";
+		break;
+		case ROR_ABX:
+		RetVal = "ROR_ABX";
+		break;
+		case RTI:
+		RetVal = "RTI";
+		break;
+		case RTS:
+		RetVal = "RTS";
+		break;
+		case SBC_IMM:
+		RetVal = "SBC_IMM";
+		break;
+		case SBC_ZP:
+		RetVal = "SBC_ZP";
+		break;
+		case SBC_ZPX:
+		RetVal = "SBC_ZPX";
+		break;
+		case SBC_AB:
+		RetVal = "SBC_AB";
+		break;
+		case SBC_ABX:
+		RetVal = "SBC_ABX";
+		break;
+		case SBC_ABY:
+		RetVal = "SBC_ABY";
+		break;
+		case SBC_INX:
+		RetVal = "SBC_INX";
+		break;
+		case SBC_INY:
+		RetVal = "SBC_INY";
+		break;
+		case SEC:
+		RetVal = "SEC";
+		break;
+		case SED:
+		RetVal = "SED";
+		break;
+		case SEI:
+		RetVal = "SEI";
+		break;
+		case STA_ZP:
+		RetVal = "STA_ZP";
+		break;
+		case STA_ZPX:
+		RetVal = "STA_ZPX";
+		break;
+		case STA_AB:
+		RetVal = "STA_AB";
+		break;
+		case STA_ABX:
+		RetVal = "STA_ABX";
+		break;
+		case STA_ABY:
+		RetVal = "STA_ABY";
+		break;
+		case STA_INX:
+		RetVal = "STA_INX";
+		break;
+		case STA_INY:
+		RetVal = "STA_INY";
+		break;
+		case STX_ZP:
+		RetVal = "STX_ZP";
+		break;
+		case STX_ZPY:
+		RetVal = "STX_ZPY";
+		break;
+		case STX_AB:
+		RetVal = "STX_AB";
+		break;
+		case STY_ZP:
+		RetVal = "STY_ZP";
+		break;
+		case STY_ZPX:
+		RetVal = "STY_ZPX";
+		break;
+		case STY_AB:
+		RetVal = "STY_AB";
+		break;
+		case TAX:
+		RetVal = "TAX";
+		break;
+		case TAY:
+		RetVal = "TAY";
+		break;
+		case TSX:
+		RetVal = "TSX";
+		break;
+		case TXA:
+		RetVal = "TXA";
+		break;
+		case TXS:
+		RetVal = "TXS";
+		break;
+		case TYA:
+		RetVal = "TYA";
+		break;
+		default:
+		RetVal = "UNKNOWN-OPCODE";
+		break;
+	}
+
+	return RetVal;
 }

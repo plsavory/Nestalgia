@@ -11,7 +11,7 @@
 #include <iterator>
 #include <assert.h>
 
-#define TestingRAMWrapping
+#define DISPLAYMEMACTIVITY
 
 MemoryManager::MemoryManager()
 {
@@ -217,7 +217,9 @@ void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 	4018-401F: APU + I/O Functionality (usually disabled)
 	4020-FFFF: Cartridge (All ROM + RAM chips on cartridge as well as other hardware)
 	*/
-
+	#ifdef DISPLAYMEMACTIVITY
+	std::cout<<"--- 	WRITE	$"<<std::hex<<Location<<std::endl;
+	#endif
 	if (Location >= 0x4020)
 		WriteCartridge(Location,Value);
 
@@ -290,6 +292,10 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location)
 	4020-FFFF: Cartridge (All ROM + RAM chips on cartridge as well as other hardware)
 	*/
 
+	#ifdef DISPLAYMEMACTIVITY
+	std::cout<<"--- 	READ	$"<<std::hex<<Location<<std::endl;
+	#endif
+
 	if (Location <=0x1FFF)
 	{
 		return MainMemory[Location];
@@ -302,7 +308,32 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location)
 	return 0x0;
 }
 
+unsigned char MemoryManager::ReadMemory(unsigned short Location,bool Silent)
+{
+	// Will fix this up later, just used to stop the READ text going off - used to display the current CPU state's opcode for debugging
+ if (!Silent)
+ std::cout<<"READ	$"<<std::hex<<Location<<std::endl;
 
+	/*
+	NES Memory Map:
+	0000-1FFF: RAM (+ Mirrored RAM)
+	2000-3FFF: PPU Registers (Mirrored every 8 bytes)
+	4000-4017: APU + I/O registers
+	4018-401F: APU + I/O Functionality (usually disabled)
+	4020-FFFF: Cartridge (All ROM + RAM chips on cartridge as well as other hardware)
+	*/
+
+	if (Location <=0x1FFF)
+	{
+		return MainMemory[Location];
+	}
+
+	if (Location >= 0x4020)
+	{
+		return ReadCartridge(Location);
+	}
+	return 0x0;
+}
 
 // These need access to the current MemoryManager state, so delare them as class functions
 unsigned short MemoryManager::IN(unsigned char Lo, unsigned char Hi)
@@ -325,7 +356,7 @@ unsigned short MemoryManager::INdY(unsigned char rY, unsigned char Loc)
 unsigned short MemoryManager::AB(unsigned char Lo, unsigned char Hi)
 {
 	// Used for Absolute writes/reads
-	std::cout<<"Reading Location: "<<std::hex<<(int)(unsigned short)Lo + (unsigned short)(Hi << 8)<<std::endl;
+	//std::cout<<"Reading Location: "<<std::hex<<(int)(unsigned short)Lo + (unsigned short)(Hi << 8)<<std::endl;
 	return ((unsigned short)Lo + (unsigned short)(Hi << 8));
 }
 
