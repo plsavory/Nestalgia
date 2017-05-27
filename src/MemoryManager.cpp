@@ -218,7 +218,7 @@ void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 	4020-FFFF: Cartridge (All ROM + RAM chips on cartridge as well as other hardware)
 	*/
 	#ifdef DISPLAYMEMACTIVITY
-	std::cout<<"--- 	WRITE	$"<<std::hex<<Location<<std::endl;
+	std::cout<<"--- 	WRITE	$"<<std::hex<<Location<<" = $"<<(int)Value<<std::endl;
 	#endif
 	if (Location >= 0x4020)
 		WriteCartridge(Location,Value);

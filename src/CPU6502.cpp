@@ -498,6 +498,16 @@ void CPU6502::Execute()
 		JMP(mainMemory->IN(b1,NB()));
 		CyclesRemain = 5;
 		break;
+		case JSR:
+			b1 = NB();
+			PushStack16(pc);
+			JMP(mainMemory->AB(b1,NB()));
+			CyclesRemain = 6;
+		break;
+		case NOP:
+			// Do nothing
+			CyclesRemain = 2;
+		break;
 		default:
 		if (InstName(opcode) != "UNKNOWN-OPCODE")
 			std::cout<<"CPU-Error: Handler not yet implemented: " << InstName(opcode) << " at: "<<(int)pc<< std::endl;
@@ -532,19 +542,20 @@ void CPU6502::branch(bool value)
 		unsigned char branchloc = NB();
 		//Get the sign of the value
 		bool sign = (branchloc>0x7F);
-		branchloc = branchloc << 1;
-		branchloc = branchloc >> 1;
 
 		if (sign)
-			dataoffset = -branchloc;
+			dataoffset = -branchloc+2;
 			else
-			dataoffset = branchloc;
+			dataoffset = branchloc+2;
 
 		 // Dataoffset should = the byte after the instruction
 		//std::cout<<"Branching to: "<<std::dec<<(int) dataoffset<<std::endl;
 		CyclesRemain = 3+pboundarypassed;
 	}
-	else CyclesRemain = 2;
+	else {
+	CyclesRemain = 2;
+	NB(); // Skip the next byte as it is data for the branch instruction.
+	}
 }
 
 void CPU6502::PrintCPUStatus(std::string inst_name)
@@ -1032,4 +1043,17 @@ std::string CPU6502::InstName(unsigned char opcode) {
 	}
 
 	return RetVal;
+}
+
+void CPU6502::PushStack8(unsigned char value) {
+	mainMemory->WriteMemory(0x100+(sp--),value);
+}
+
+void CPU6502::PushStack16(unsigned short value) {
+	PushStack8(value >> 8);
+	PushStack8(value);
+}
+
+unsigned char CPU6502::PopStack() {
+	return mainMemory->ReadMemory(0x100 + (++sp));
 }

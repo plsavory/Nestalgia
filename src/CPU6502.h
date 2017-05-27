@@ -46,4 +46,7 @@ private:
 	unsigned short location16;
 	unsigned char result;
 	std::string InstName(unsigned char opcode);
+	void PushStack8(unsigned char value);
+	void PushStack16(unsigned short value);
+	unsigned char PopStack();
 };
