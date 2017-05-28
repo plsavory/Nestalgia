@@ -9,7 +9,7 @@ CPU6502::CPU6502(MemoryManager &mManager)
 {
 	myState = CPUState::Running;
 	mainMemory = &mManager;
-	FlagRegister = 0x0; // Initialize the flags register
+	FlagRegister = 0x24; // Initialize the flags register
 	rA, rX, rY = 0x0;
 	pc = 0x0;
 	myState = CPUState::Running;
@@ -25,14 +25,15 @@ void CPU6502::Reset()
 {
 	// Should always be called before starting emulation (Sets the program counter to the appropriate place)
 	myState = CPUState::Running;
-	FlagRegister = 0x0; // Initialize the flags register
+	FlagRegister = 0x24; // Initialize the flags register - unused and I should be set to 1.
 	rX = 0x0;
 	rY = 0x0;
 	rA = 0x0;
 	//pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
 	pc = 0xC000;
 	sp = 0xFF; // Set the stack pointer
-
+	SetFlag(Flag::Unused,1);
+	SetFlag(Flag::EInterrupt,1);
 	myState = CPUState::Running;
 }
 
@@ -517,6 +518,23 @@ void CPU6502::Execute()
 			BIT(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
 			CyclesRemain = 4;
 		break;
+		// Stack operations
+		case PHA:
+			PushStack8(rA);
+			CyclesRemain = 3;
+		break;
+		case PHP:
+			PushStack8(FlagRegister);
+			CyclesRemain = 3;
+		break;
+		case PLA:
+			rA = LD(PopStack());
+			CyclesRemain = 4;
+		break;
+		case PLP:
+			FlagRegister = PopStack();
+			CyclesRemain = 4;
+		break;
 		case NOP:
 			// Do nothing
 			CyclesRemain = 2;
@@ -936,8 +954,8 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		case PLA:
 		RetVal = "PLA";
 		break;
-		case PLS:
-		RetVal = "PLS";
+		case PLP:
+		RetVal = "PLP";
 		break;
 		case ROL_ACC:
 		RetVal = "ROL_ACC";

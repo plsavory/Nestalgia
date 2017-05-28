@@ -29,7 +29,7 @@
 #define ASL_AB 0x0E
 #define ASL_ABX 0x1E
 
-// Branch instructions
+// Branch instructions - Cycles +=1 if branch is on same page, +=2 if its on a different page
 #define BCC 0x90
 #define BCS 0xB0
 #define BEQ 0xF0
@@ -140,7 +140,7 @@
 #define PHA 0x48
 #define PHP 0x08
 #define PLA 0x68
-#define PLS 0x28
+#define PLP 0x28
 
 // Rotate instructions
 #define ROL_ACC 0x2A
