@@ -500,9 +500,22 @@ void CPU6502::Execute()
 		break;
 		case JSR:
 			b1 = NB();
-			PushStack16(pc);
+			PushStack16(pc+3); // Push the location of the next instruction -1 to the stack
 			JMP(mainMemory->AB(b1,NB()));
 			CyclesRemain = 6;
+		break;
+		case RTS:
+			fRTS();
+			CyclesRemain = 6;
+		break;
+		case BIT_ZP:
+			BIT(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case BIT_AB:
+			b1 = NB();
+			BIT(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
 		break;
 		case NOP:
 			// Do nothing
@@ -528,6 +541,21 @@ void CPU6502::Execute()
 
 	// Reduce the remaining cycles variable as we've just done one (put this outside an if statement later to enable cycle accuracy when it is implemented).
 	CyclesRemain--;
+}
+
+void CPU6502::fRTS()
+{
+	// Return from a subroutine
+	unsigned char lo = PopStack();
+	unsigned char hi = PopStack();
+	unsigned short location = (hi << 8) + lo;
+	JMP(location);
+}
+
+void CPU6502::BIT(unsigned char value) {
+	SetFlag(Flag::Sign,(value >> 7)); // Set S flag to bit 7
+	SetFlag(Flag::Overflow,(value << 1) >> 7); // Set V flag to bit 6
+	SetFlag(Flag::Zero,(value & rA));
 }
 
 void CPU6502::JMP(unsigned short Location) {

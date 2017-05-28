@@ -49,4 +49,6 @@ private:
 	void PushStack8(unsigned char value);
 	void PushStack16(unsigned short value);
 	unsigned char PopStack();
+	void BIT(unsigned char value);
+	void fRTS();
 };
