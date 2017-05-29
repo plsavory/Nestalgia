@@ -65,8 +65,15 @@ bool CPU6502::GetFlag(Flag flag, unsigned char value)
 }
 
 unsigned char CPU6502::ORA(unsigned char value) {
-	// Exclusive OR between A and value. Save result in A. Set Zero and Negative flags appropriately
+	// Inclusive OR between A and value. Save result in A. Set Zero and Negative flags appropriately
 	unsigned char result = value | rA;
+	SetFlag(Flag::Zero, result == 0x0);
+	SetFlag(Flag::Sign, result > 0x7F);
+	return result;
+}
+
+unsigned char CPU6502::EOR(unsigned char value) {
+	unsigned char result = value ^ rA;
 	SetFlag(Flag::Zero, result == 0x0);
 	SetFlag(Flag::Sign, result > 0x7F);
 	return result;
@@ -357,6 +364,114 @@ void CPU6502::Execute()
 		break;
 		case ORA_INY:
 			rA = ORA(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
+			CyclesRemain = 5+pboundarypassed;
+		break;
+		// EOR instructions
+		case EOR_IMM:
+			rA = EOR(NB());
+			CyclesRemain = 2;
+		break;
+		case EOR_ZP:
+			rA = EOR(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case EOR_ZPX:
+			rA = EOR(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
+			CyclesRemain = 4;
+		break;
+		case EOR_AB:
+			b1 = NB();
+			rA = EOR(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+		break;
+		case EOR_ABX:
+			b1 = NB();
+			rA = EOR(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case EOR_ABY:
+			b1 = NB();
+			rA = EOR(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case EOR_INX:
+			rA = EOR(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
+			CyclesRemain = 6;
+		break;
+		case EOR_INY:
+			rA = EOR(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
+			CyclesRemain = 5+pboundarypassed;
+		break;
+		// ADC instructions
+		case ADC_IMM:
+			rA = ADC(NB());
+			CyclesRemain = 2;
+		break;
+		case ADC_ZP:
+			rA = ADC(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case ADC_ZPX:
+			rA = ADC(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
+			CyclesRemain = 4;
+		break;
+		case ADC_AB:
+			b1 = NB();
+			rA = ADC(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+		break;
+		case ADC_ABX:
+			b1 = NB();
+			rA = ADC(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case ADC_ABY:
+			b1 = NB();
+			rA = ADC(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case ADC_INX:
+			rA = ADC(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
+			CyclesRemain = 6;
+		break;
+		case ADC_INY:
+			rA = ADC(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
+			CyclesRemain = 5+pboundarypassed;
+		break;
+		// ABC instructions
+		case SBC_IMM:
+			rA = SBC(NB());
+			CyclesRemain = 2;
+		break;
+		case SBC_ZP:
+			rA = SBC(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case SBC_ZPX:
+			rA = SBC(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
+			CyclesRemain = 4;
+		break;
+		case SBC_AB:
+			b1 = NB();
+			rA = SBC(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+		break;
+		case SBC_ABX:
+			b1 = NB();
+			rA = SBC(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case SBC_ABY:
+			b1 = NB();
+			rA = SBC(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case SBC_INX:
+			rA = SBC(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
+			CyclesRemain = 6;
+		break;
+		case SBC_INY:
+			rA = SBC(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
 			CyclesRemain = 5+pboundarypassed;
 		break;
 		// ASL instructions
