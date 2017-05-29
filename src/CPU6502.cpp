@@ -64,6 +64,14 @@ bool CPU6502::GetFlag(Flag flag, unsigned char value)
 		return false;
 }
 
+unsigned char CPU6502::ORA(unsigned char value) {
+	// Exclusive OR between A and value. Save result in A. Set Zero and Negative flags appropriately
+	unsigned char result = value | rA;
+	SetFlag(Flag::Zero, result == 0x0);
+	SetFlag(Flag::Sign, result > 0x7F);
+	return result;
+}
+
 unsigned char CPU6502::AND(unsigned char value)
 {
 	// AND the value with the accumulator, and then set the flags accordingly and return the result.
@@ -313,6 +321,42 @@ void CPU6502::Execute()
 		break;
 		case AND_INY:
 			rA = AND(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
+			CyclesRemain = 5+pboundarypassed;
+		break;
+		// ORA instructions
+		case ORA_IMM:
+			rA = ORA(NB());
+			CyclesRemain = 2;
+		break;
+		case ORA_ZP:
+			rA = ORA(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case ORA_ZPX:
+			rA = ORA(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
+			CyclesRemain = 4;
+		break;
+		case ORA_AB:
+			b1 = NB();
+			rA = ORA(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+		break;
+		case ORA_ABX:
+			b1 = NB();
+			rA = ORA(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case ORA_ABY:
+			b1 = NB();
+			rA = ORA(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case ORA_INX:
+			rA = ORA(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
+			CyclesRemain = 6;
+		break;
+		case ORA_INY:
+			rA = ORA(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
 			CyclesRemain = 5+pboundarypassed;
 		break;
 		// ASL instructions

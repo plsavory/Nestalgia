@@ -26,6 +26,7 @@ public:
 	unsigned char ROR(unsigned char value);
 	unsigned char ADC(unsigned char value);
 	unsigned char SBC(unsigned char value);
+	unsigned char ORA(unsigned char value);
 	void CMP(unsigned char Register, unsigned char Value);
 	unsigned short answer16;
 	void Execute();
