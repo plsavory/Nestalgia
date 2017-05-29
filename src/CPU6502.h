@@ -12,6 +12,7 @@ public:
 	void SetFlag(Flag flag, bool val);
 	unsigned char GetFlags();
 	bool GetFlag(Flag flag);
+	bool GetFlag(Flag flag, unsigned char value);
 	unsigned char GetAcc();
 	unsigned char GetX();
 	unsigned char GetY();
@@ -25,6 +26,7 @@ public:
 	unsigned char ROR(unsigned char value);
 	unsigned char ADC(unsigned char value);
 	unsigned char SBC(unsigned char value);
+	void CMP(unsigned char Register, unsigned char Value);
 	unsigned short answer16;
 	void Execute();
 	void Reset();
@@ -49,6 +51,7 @@ private:
 	void PushStack8(unsigned char value);
 	void PushStack16(unsigned short value);
 	unsigned char PopStack();
+	void fPLP(unsigned char value);
 	void BIT(unsigned char value);
 	void fRTS();
 };

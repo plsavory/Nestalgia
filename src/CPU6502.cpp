@@ -55,6 +55,15 @@ bool CPU6502::GetFlag(Flag flag)
 		return false;
 }
 
+bool CPU6502::GetFlag(Flag flag, unsigned char value)
+{
+	// Figures out the value of a current flag by AND'ing the flag register against the flag that needs extracting.
+	if (value & flag)
+		return true;
+	else
+		return false;
+}
+
 unsigned char CPU6502::AND(unsigned char value)
 {
 	// AND the value with the accumulator, and then set the flags accordingly and return the result.
@@ -532,7 +541,69 @@ void CPU6502::Execute()
 			CyclesRemain = 4;
 		break;
 		case PLP:
-			FlagRegister = PopStack();
+			fPLP(PopStack());
+			CyclesRemain = 4;
+		break;
+		// CMP Instructions
+		case CMP_IMM:
+			CMP(rA,NB());
+			CyclesRemain = 2;
+		break;
+		case CMP_ZP:
+			CMP(rA,mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case CMP_ZPX:
+			CMP(rA,mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
+			CyclesRemain = 4;
+		break;
+		case CMP_AB:
+			b1 = NB();
+			CMP(rA,mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+		break;
+		case CMP_ABX:
+			b1 = NB();
+			CMP(rA,mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case CMP_ABY:
+			b1 = NB();
+			CMP(rA,mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case CMP_INX:
+			CMP(rA, mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
+			CyclesRemain = 6;
+		break;
+		case CMP_INY:
+			CMP(rA, mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
+			CyclesRemain = 5+pboundarypassed;
+		break;
+		case CPX_IMM:
+			CMP(rX,NB());
+			CyclesRemain = 2;
+		break;
+		case CPX_ZP:
+			CMP(rX,mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case CPX_AB:
+			b1 = NB();
+			CMP(rX,mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+		break;
+		case CPY_IMM:
+			CMP(rY,NB());
+			CyclesRemain = 2;
+		break;
+		case CPY_ZP:
+			CMP(rY,mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case CPY_AB:
+			b1 = NB();
+			CMP(rY,mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
 			CyclesRemain = 4;
 		break;
 		case NOP:
@@ -561,6 +632,16 @@ void CPU6502::Execute()
 	CyclesRemain--;
 }
 
+void CPU6502::fPLP(unsigned char value) {
+// Bits 4 and 5 should be ignored, so we need to set the status register manually
+	SetFlag(Flag::Carry,GetFlag(Flag::Carry,value));
+	SetFlag(Flag::Zero,GetFlag(Flag::Zero,value));
+	SetFlag(Flag::EInterrupt,GetFlag(Flag::EInterrupt,value));
+	SetFlag(Flag::BCDMode,GetFlag(Flag::BCDMode,value));
+	SetFlag(Flag::Overflow,GetFlag(Flag::Overflow,value));
+	SetFlag(Flag::Sign,GetFlag(Flag::Overflow,value));
+}
+
 void CPU6502::fRTS()
 {
 	// Return from a subroutine
@@ -572,8 +653,14 @@ void CPU6502::fRTS()
 
 void CPU6502::BIT(unsigned char value) {
 	SetFlag(Flag::Sign,(value >> 7)); // Set S flag to bit 7
-	SetFlag(Flag::Overflow,(value << 1) >> 7); // Set V flag to bit 6
-	SetFlag(Flag::Zero,(value & rA));
+	SetFlag(Flag::Overflow,(unsigned char)(value << 1) >> 7); // Set V flag to bit 6
+	SetFlag(Flag::Zero,!(rA & value));
+}
+
+void CPU6502::CMP(unsigned char Register, unsigned char Value) {
+	SetFlag(Flag::Carry,Register >= Value);
+	SetFlag(Flag::Zero,Register == Value);
+	SetFlag(Flag::Sign,(Register-Value) > 127);
 }
 
 void CPU6502::JMP(unsigned short Location) {

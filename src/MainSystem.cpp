@@ -21,6 +21,9 @@ void MainSystem::Execute() {
   std::cout<<"CPU-Start"<<std::endl;
 
     mainCPU->Reset();
+
+  // PAL Master clock: 21.48MHz, NTSC master clock: 26.60mhz.
+  // CPU Clock: Master/12 (NTSC), Master/16 (PAL)
   while (mainCPU->myState == CPUState::Running)
     mainCPU->Execute();
 }
