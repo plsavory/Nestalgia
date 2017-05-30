@@ -1,7 +1,11 @@
 #include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
 #include "MemoryManager.h"
 #include "CPU6502.h"
 
+#define LOGCPUTOFILE
 #define PRINTCPUSTATUS
 
 CPU6502::CPU6502(MemoryManager &mManager)
@@ -12,6 +16,7 @@ CPU6502::CPU6502(MemoryManager &mManager)
 	rA, rX, rY = 0x0;
 	pc = 0x0;
 	myState = CPUState::Running;
+	cpucycles = 0;
 }
 
 
@@ -34,6 +39,15 @@ void CPU6502::Reset()
 	SetFlag(Flag::Unused,1);
 	SetFlag(Flag::EInterrupt,1);
 	myState = CPUState::Running;
+
+	// Set up CPU logging (if it is enabled)
+	// Set up the std::cout redirect for logging
+
+	#ifdef LOGCPUTOFILE
+	std::cout<<"Logging CPU activity to CPULog.txt"<<std::endl;
+	redirectfile = new std::ofstream("CPULog.log");
+	std::cout.rdbuf(redirectfile->rdbuf());
+	#endif
 }
 
 void CPU6502::SetFlag(Flag flag, bool val)
@@ -43,6 +57,18 @@ void CPU6502::SetFlag(Flag flag, bool val)
 		FlagRegister |= flag;
 	else
 		FlagRegister &= ~(flag);
+}
+
+unsigned char CPU6502::SetBit(int bit, bool val, unsigned char value) // Used for setting flags to a value which is not the flag register
+{
+	// Sets a specific flag to true or false depending on the value of "val"
+	unsigned char RetVal = value;
+	if (val)
+		RetVal |= (1 << bit);
+	else
+		RetVal &= ~(1 << bit);
+
+	return RetVal;
 }
 
 bool CPU6502::GetFlag(Flag flag)
@@ -57,6 +83,15 @@ bool CPU6502::GetFlag(Flag flag)
 bool CPU6502::SignBit(unsigned char value)
 {
 	if (value & 1 << 7)
+		return true;
+	else
+		return false;
+}
+
+bool CPU6502::GetBit(int bit, unsigned char value)
+{
+	// Figures out the value of a current flag by AND'ing the flag register against the flag that needs extracting.
+	if (value & (1 << bit))
 		return true;
 	else
 		return false;
@@ -113,6 +148,13 @@ unsigned char CPU6502::LSR(unsigned char value)
 	return result;
 }
 
+unsigned char CPU6502::SLO(unsigned char value) {
+	unsigned char result = value << 1;
+	result = rA | result;
+
+	return result;
+}
+
 unsigned char CPU6502::ROL(unsigned char value)
 {
 	unsigned char result = value << 1;
@@ -131,7 +173,12 @@ unsigned char CPU6502::ROL(unsigned char value)
 }
 unsigned char CPU6502::ROR(unsigned char value)
 {
+	// Shift all bits right by 1
 	unsigned char result = value >> 1;
+	result = SetBit(7,GetFlag(Flag::Carry),result); // Put the current value of the carry flag onto bit 7 of the result
+	SetFlag(Flag::Carry,GetBit(0,value)); // Shift bit 0 of the original value onto the carry flag.
+	SetFlag(Flag::Zero,result == 0);
+	SetFlag(Flag::Sign,result > 0x7F);
 	return result;
 }
 
@@ -212,7 +259,7 @@ void CPU6502::Execute()
 {
 	// Debug reasons
 	unsigned char currentInst = mainMemory->ReadMemory(pc,1);
-
+	CyclesRemain = 0; // Remove this later
 	// Print the CPU's current status
 	#ifdef PRINTCPUSTATUS
 	if (currentInst) // if not null
@@ -229,6 +276,17 @@ void CPU6502::Execute()
 	// Attempt to execute the opcode
 	switch (opcode)
 	{
+		// BRK instructions
+
+/*
+		case BRK:
+			NB(); // Increment PC by 1 (2 in this case)
+			PushStack16(pc+3); // Push the location of the next instruction to the stack
+			fBRK(); // Push the status register
+			JMP(mainMemory->ReadMemory(0xFFFE));
+			CyclesRemain = 7;
+		break;
+		*/
 		// LD_ZP instructions
 		case LDA_ZP:
 			rA = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
@@ -878,7 +936,7 @@ void CPU6502::Execute()
 			CyclesRemain = 3;
 		break;
 		case PHP:
-			PushStack8(FlagRegister);
+			fPHP();
 			CyclesRemain = 3;
 		break;
 		case PLA:
@@ -1006,6 +1064,12 @@ void CPU6502::Execute()
 			mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB()));
 			CyclesRemain = 4+pboundarypassed;
 		break;
+		// SLO
+		case SLO_ABY:
+			b1 = NB();
+			rA = SLO(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 7;
+		break;
 		default:
 		if (InstName(opcode) != "UNKNOWN-OPCODE")
 			std::cout<<"CPU-Error: Handler not yet implemented: " << InstName(opcode) << " at: "<<(int)pc<< std::endl;
@@ -1026,7 +1090,8 @@ void CPU6502::Execute()
 	dataoffset = 0;
 
 	// Reduce the remaining cycles variable as we've just done one (put this outside an if statement later to enable cycle accuracy when it is implemented).
-	CyclesRemain--;
+
+	cpucycles += CyclesRemain;
 }
 
 void CPU6502::fPLP(unsigned char value) {
@@ -1037,6 +1102,15 @@ void CPU6502::fPLP(unsigned char value) {
 	SetFlag(Flag::BCDMode,GetFlag(Flag::BCDMode,value));
 	SetFlag(Flag::Overflow,GetFlag(Flag::Overflow,value));
 	SetFlag(Flag::Sign,GetFlag(Flag::Sign,value));
+}
+
+void CPU6502::fPHP()
+{
+	// Push the status register to the stack. Bit 4 should be set (only in the value pushed to the stack) if pushed by PHP or BRK.
+	// If an interrupt, it should be clear.
+	unsigned char pushflags = FlagRegister;
+	pushflags = SetBit(4,1,pushflags);
+	PushStack8(pushflags);
 }
 
 void CPU6502::fRTS()
@@ -1058,6 +1132,13 @@ void CPU6502::fRTI() {
 	JMP(location); // Unlike with RTS, the pushed address contains the actual address we need to jump back to.
 }
 
+void CPU6502::fBRK() {
+	// Push the current PC + 2 to the stack, and then JMP to tbe BRK vector ($FFFE)
+	unsigned char pushflags = FlagRegister;
+	pushflags = SetBit(4,1,pushflags);
+	PushStack8(pushflags);
+}
+
 void CPU6502::BIT(unsigned char value) {
 	SetFlag(Flag::Sign,(value >> 7)); // Set S flag to bit 7
 	SetFlag(Flag::Overflow,(unsigned char)(value << 1) >> 7); // Set V flag to bit 6
@@ -1067,7 +1148,8 @@ void CPU6502::BIT(unsigned char value) {
 void CPU6502::CMP(unsigned char Register, unsigned char Value) {
 	SetFlag(Flag::Carry,Register >= Value);
 	SetFlag(Flag::Zero,Register == Value);
-	SetFlag(Flag::Sign,(Register-Value) > 127);
+	unsigned char result = (Register - Value);
+	SetFlag(Flag::Sign, result > 0x7F);
 }
 
 void CPU6502::JMP(unsigned short Location) {
@@ -1100,9 +1182,21 @@ void CPU6502::branch(bool value)
 
 void CPU6502::PrintCPUStatus(std::string inst_name)
 {
-	std::cout<<std::hex<<"--- pc: $"<<(int)pc<<" --- A: $"<<(int)rA<<" iX: $"<<(int)rX<<" iY: $"<<(int)rY<<" Flags: $"<<(int)FlagRegister<<" sp: $"<<(int)sp<<" --- "<<inst_name<<" --- "<<std::endl;
+	std::cout<<std::uppercase<<std::hex<<(int)pc<<"            "<<inst_name;
+	std::cout<<"      A:"<<ConvertHex(rA)<<" X:"<<ConvertHex(rX)<<" Y:"<<ConvertHex(rY)<<" P:"<<(int)FlagRegister<<" SP:"<<(int)sp<<" CPUC:"<<std::dec<<cpucycles<<std::hex<<std::endl;
 }
 
+std::string CPU6502::ConvertHex(int value) {
+	// Displays a hex number formatted to match the other emulator's log better
+	std::stringstream s;
+
+	if (value < 0xF)
+		s << std::uppercase << std::hex <<"0"<<value;
+	else
+		s << std::uppercase <<std::hex <<value;
+
+		return s.str();
+}
 // Used for unit testing purposes...
 unsigned char CPU6502::GetFlags()
 {
@@ -1128,17 +1222,20 @@ std::string CPU6502::InstName(unsigned char opcode) {
 	std::string RetVal;
 	switch (opcode)
 	{
+		case BRK:
+		RetVal = "BRK    ";
+		break;
 		case ADC_IMM:
 		RetVal = "ADC_IMM";
 		break;
 		case ADC_ZP:
-		RetVal = "ADC_ZP";
+		RetVal = "ADC_ZP ";
 		break;
 		case ADC_ZPX:
 		RetVal = "ADC_ZPX";
 		break;
 		case ADC_AB:
-		RetVal = "ADC_AB";
+		RetVal = "ADC_AB ";
 		break;
 		case ADC_ABX:
 		RetVal = "ADC_ABX";
@@ -1156,13 +1253,13 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "AND_IMM";
 		break;
 		case AND_ZP:
-		RetVal = "AND_ZP";
+		RetVal = "AND_ZP ";
 		break;
 		case AND_ZPX:
 		RetVal = "AND_ZPX";
 		break;
 		case AND_AB:
-		RetVal = "AND_AB";
+		RetVal = "AND_AB ";
 		break;
 		case AND_ABX:
 		RetVal = "AND_ABX";
@@ -1180,70 +1277,70 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "ASL_ACC";
 		break;
 		case ASL_ZP:
-		RetVal = "ASL_ZP";
+		RetVal = "ASL_ZP ";
 		break;
 		case ASL_ZPX:
 		RetVal = "ASL_ZPX";
 		break;
 		case ASL_AB:
-		RetVal = "ASL_AB";
+		RetVal = "ASL_AB ";
 		break;
 		case ASL_ABX:
 		RetVal = "ASL_ABX";
 		break;
 		case BCC:
-		RetVal = "BCC";
+		RetVal = "BCC    ";
 		break;
 		case BCS:
-		RetVal = "BCS";
+		RetVal = "BCS    ";
 		break;
 		case BEQ:
-		RetVal = "BEQ";
+		RetVal = "BEQ    ";
 		break;
 		case BMI:
-		RetVal = "BMI";
+		RetVal = "BMI    ";
 		break;
 		case BNE:
-		RetVal = "BNE";
+		RetVal = "BNE    ";
 		break;
 		case BPL:
-		RetVal = "BPL";
+		RetVal = "BPL    ";
 		break;
 		case BVC:
-		RetVal = "BVC";
+		RetVal = "BVC    ";
 		break;
 		case BVS:
-		RetVal = "BVS";
+		RetVal = "BVS    ";
 		break;
 		case BIT_ZP:
-		RetVal = "BIT_ZP";
+		RetVal = "BIT_ZP ";
 		break;
 		case BIT_AB:
-		RetVal = "BIT_AB";
+		RetVal = "BIT_AB ";
 		break;
 		case CLC:
-		RetVal = "CLC";
+		RetVal = "CLC    ";
 		break;
 		case CLD:
-		RetVal = "CLD";
+		RetVal = "CLD    ";
 		break;
 		case CLI:
-		RetVal = "CLI";
+		RetVal = "CLI    ";
 		break;
 		case CLV:
-		RetVal = "CLV";
+		RetVal = "CLV    ";
 		break;
 		case CMP_IMM:
 		RetVal = "CMP_IMM";
 		break;
 		case CMP_ZP:
-		RetVal = "CMP_ZP";
+		RetVal = "CMP_ZP ";
 		break;
 		case CMP_ZPX:
 		RetVal = "CMP_ZPX";
 		break;
 		case CMP_AB:
-		RetVal = "CMP_AB";
+		RetVal = "CMP_AB ";
 		break;
 		case CMP_ABX:
 		RetVal = "CMP_ABX";
@@ -1261,49 +1358,49 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "CPX_IMM";
 		break;
 		case CPX_ZP:
-		RetVal = "CPX_ZP";
+		RetVal = "CPX_ZP ";
 		break;
 		case CPX_AB:
-		RetVal = "CPX_AB";
+		RetVal = "CPX_AB ";
 		break;
 		case CPY_IMM:
 		RetVal = "CPY_IMM";
 		break;
 		case CPY_ZP:
-		RetVal = "CPY_ZP";
+		RetVal = "CPY_ZP ";
 		break;
 		case CPY_AB:
-		RetVal = "CPY_AB";
+		RetVal = "CPY_AB ";
 		break;
 		case DEC_ZP:
-		RetVal = "DEC_ZP";
+		RetVal = "DEC_ZP ";
 		break;
 		case DEC_ZPX:
 		RetVal = "DEC_ZPX";
 		break;
 		case DEC_AB:
-		RetVal = "DEC_AB";
+		RetVal = "DEC_AB ";
 		break;
 		case DEC_ABX:
 		RetVal = "DEC_ABX";
 		break;
 		case DEX:
-		RetVal = "DEX";
+		RetVal = "DEX    ";
 		break;
 		case DEY:
-		RetVal = "DEY";
+		RetVal = "DEY    ";
 		break;
 		case EOR_IMM:
 		RetVal = "EOR_IMM";
 		break;
 		case EOR_ZP:
-		RetVal = "EOR_ZP";
+		RetVal = "EOR_ZP ";
 		break;
 		case EOR_ZPX:
 		RetVal = "EOR_ZPX";
 		break;
 		case EOR_AB:
-		RetVal = "EOR_AB";
+		RetVal = "EOR_AB ";
 		break;
 		case EOR_ABX:
 		RetVal = "EOR_ABX";
@@ -1318,43 +1415,43 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "EOR_INY";
 		break;
 		case INC_ZP:
-		RetVal = "INC_ZP";
+		RetVal = "INC_ZP ";
 		break;
 		case INC_ZPX:
 		RetVal = "INC_ZPX";
 		break;
 		case INC_AB:
-		RetVal = "INC_AB";
+		RetVal = "INC_AB ";
 		break;
 		case INC_ABX:
 		RetVal = "INC_ABX";
 		break;
 		case INX:
-		RetVal = "INX";
+		RetVal = "INX    ";
 		break;
 		case INY:
-		RetVal = "INY";
+		RetVal = "INY    ";
 		break;
 		case JMP_AB:
-		RetVal = "JMP_AB";
+		RetVal = "JMP_AB ";
 		break;
 		case JMP_IN:
-		RetVal = "JMP_IN";
+		RetVal = "JMP_IN ";
 		break;
 		case JSR:
-		RetVal = "JSR";
+		RetVal = "JSR    ";
 		break;
 		case LDA_IMM:
 		RetVal = "LDA_IMM";
 		break;
 		case LDA_ZP:
-		RetVal = "LDA_ZP";
+		RetVal = "LDA_ZP ";
 		break;
 		case LDA_ZPX:
 		RetVal = "LDA_ZPX";
 		break;
 		case LDA_AB:
-		RetVal = "LDA_AB";
+		RetVal = "LDA_AB ";
 		break;
 		case LDA_ABX:
 		RetVal = "LDA_ABX";
@@ -1372,13 +1469,13 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "LDX_IMM";
 		break;
 		case LDX_ZP:
-		RetVal = "LDX_ZP";
+		RetVal = "LDX_ZP ";
 		break;
 		case LDX_ZPY:
 		RetVal = "LDX_ZPY";
 		break;
 		case LDX_AB:
-		RetVal = "LDX_AB";
+		RetVal = "LDX_AB ";
 		break;
 		case LDX_ABY:
 		RetVal = "LDX_ABY";
@@ -1387,46 +1484,46 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "LDY_IMM";
 		break;
 		case LDY_ZP:
-		RetVal = "LDY_ZP";
+		RetVal = "LDY_ZP ";
 		break;
 		case LDY_ZPX:
 		RetVal = "LDY_ZPX";
 		break;
 		case LDY_AB:
-		RetVal = "LDY_AB";
+		RetVal = "LDY_AB ";
 		break;
 		case LDY_ABX:
 		RetVal = "LDY_ABX";
 		break;
 		case LSR_ACC:
-		RetVal = "LSR_A";
+		RetVal = "LSR_A  ";
 		break;
 		case LSR_ZP:
-		RetVal = "LSR_ZP";
+		RetVal = "LSR_ZP ";
 		break;
 		case LSR_ZPX:
 		RetVal = "LSR_ZPX";
 		break;
 		case LSR_AB:
-		RetVal = "LSR_AB";
+		RetVal = "LSR_AB ";
 		break;
 		case LSR_ABX:
 		RetVal = "LSR_ABX";
 		break;
 		case NOP:
-		RetVal = "NOP";
+		RetVal = "NOP    ";
 		break;
 		case ORA_IMM:
 		RetVal = "ORA_IMM";
 		break;
 		case ORA_ZP:
-		RetVal = "ORA_ZP";
+		RetVal = "ORA_ZP ";
 		break;
 		case ORA_ZPX:
 		RetVal = "ORA_ZPX";
 		break;
 		case ORA_AB:
-		RetVal = "ORA_AB";
+		RetVal = "ORA_AB ";
 		break;
 		case ORA_ABX:
 		RetVal = "ORA_ABX";
@@ -1440,28 +1537,28 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "ORA_INY";
 		break;
 		case PHA:
-		RetVal = "PHA";
+		RetVal = "PHA    ";
 		break;
 		case PHP:
-		RetVal = "PHP";
+		RetVal = "PHP    ";
 		break;
 		case PLA:
-		RetVal = "PLA";
+		RetVal = "PLA    ";
 		break;
 		case PLP:
-		RetVal = "PLP";
+		RetVal = "PLP    ";
 		break;
 		case ROL_ACC:
 		RetVal = "ROL_ACC";
 		break;
 		case ROL_ZP:
-		RetVal = "ROL_ZP";
+		RetVal = "ROL_ZP ";
 		break;
 		case ROL_ZPX:
 		RetVal = "ROL_ZPX";
 		break;
 		case ROL_AB:
-		RetVal = "ROL_AB";
+		RetVal = "ROL_AB ";
 		break;
 		case ROL_ABX:
 		RetVal = "ROL_ABX";
@@ -1470,34 +1567,34 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "ROR_ACC";
 		break;
 		case ROR_ZP:
-		RetVal = "ROR_ZP";
+		RetVal = "ROR_ZP ";
 		break;
 		case ROR_ZPX:
 		RetVal = "ROR_ZPX";
 		break;
 		case ROR_AB:
-		RetVal = "ROR_AB";
+		RetVal = "ROR_AB ";
 		break;
 		case ROR_ABX:
 		RetVal = "ROR_ABX";
 		break;
 		case RTI:
-		RetVal = "RTI";
+		RetVal = "RTI    ";
 		break;
 		case RTS:
-		RetVal = "RTS";
+		RetVal = "RTS    ";
 		break;
 		case SBC_IMM:
 		RetVal = "SBC_IMM";
 		break;
 		case SBC_ZP:
-		RetVal = "SBC_ZP";
+		RetVal = "SBC_ZP ";
 		break;
 		case SBC_ZPX:
 		RetVal = "SBC_ZPX";
 		break;
 		case SBC_AB:
-		RetVal = "SBC_AB";
+		RetVal = "SBC_AB ";
 		break;
 		case SBC_ABX:
 		RetVal = "SBC_ABX";
@@ -1512,22 +1609,22 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "SBC_INY";
 		break;
 		case SEC:
-		RetVal = "SEC";
+		RetVal = "SEC    ";
 		break;
 		case SED:
-		RetVal = "SED";
+		RetVal = "SED    ";
 		break;
 		case SEI:
-		RetVal = "SEI";
+		RetVal = "SEI    ";
 		break;
 		case STA_ZP:
-		RetVal = "STA_ZP";
+		RetVal = "STA_ZP ";
 		break;
 		case STA_ZPX:
 		RetVal = "STA_ZPX";
 		break;
 		case STA_AB:
-		RetVal = "STA_AB";
+		RetVal = "STA_AB ";
 		break;
 		case STA_ABX:
 		RetVal = "STA_ABX";
@@ -1542,40 +1639,40 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "STA_INY";
 		break;
 		case STX_ZP:
-		RetVal = "STX_ZP";
+		RetVal = "STX_ZP ";
 		break;
 		case STX_ZPY:
 		RetVal = "STX_ZPY";
 		break;
 		case STX_AB:
-		RetVal = "STX_AB";
+		RetVal = "STX_AB ";
 		break;
 		case STY_ZP:
-		RetVal = "STY_ZP";
+		RetVal = "STY_ZP ";
 		break;
 		case STY_ZPX:
 		RetVal = "STY_ZPX";
 		break;
 		case STY_AB:
-		RetVal = "STY_AB";
+		RetVal = "STY_AB ";
 		break;
 		case TAX:
-		RetVal = "TAX";
+		RetVal = "TAX    ";
 		break;
 		case TAY:
-		RetVal = "TAY";
+		RetVal = "TAY    ";
 		break;
 		case TSX:
-		RetVal = "TSX";
+		RetVal = "TSX    ";
 		break;
 		case TXA:
-		RetVal = "TXA";
+		RetVal = "TXA    ";
 		break;
 		case TXS:
-		RetVal = "TXS";
+		RetVal = "TXS    ";
 		break;
 		case TYA:
-		RetVal = "TYA";
+		RetVal = "TYA    ";
 		break;
 		// Undocumented opcodes from here on out
 		case NOP1:
@@ -1584,7 +1681,7 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		case NOP4:
 		case NOP5:
 		case NOP6:
-		RetVal = "*NOP";
+		RetVal = "*NOP   ";
 		break;
 		case DOP1:
 		case DOP2:
@@ -1600,7 +1697,7 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		case DOP12:
 		case DOP13:
 		case DOP14:
-		RetVal = "DOP";
+		RetVal = "DOP    ";
 		break;
 		case TOP1:
 		case TOP2:
@@ -1609,7 +1706,28 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		case TOP5:
 		case TOP6:
 		case TOP7:
-		RetVal = "TOP";
+		RetVal = "TOP    ";
+		break;
+		case SLO_ZP:
+		RetVal = "SLO_ZP ";
+		break;
+		case SLO_ZPX:
+		RetVal = "SLO_ZPX";
+		break;
+		case SLO_AB:
+		RetVal = "SLO_AB ";
+		break;
+		case SLO_ABX:
+		RetVal = "SLO_ABX";
+		break;
+		case SLO_ABY:
+		RetVal = "SLO_ABY";
+		break;
+		case SLO_INX:
+		RetVal = "SLO_INX";
+		break;
+		case SLO_INY:
+		RetVal = "SLO_INY";
 		break;
 		default:
 		RetVal = "UNKNOWN-OPCODE";

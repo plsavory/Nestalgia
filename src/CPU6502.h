@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream>
 #include "CPUInstructions.h"
 using namespace M6502;
 
@@ -10,6 +11,8 @@ public:
 	~CPU6502();
 	CPUState myState;
 	void SetFlag(Flag flag, bool val);
+	unsigned char SetBit(int bit, bool val,unsigned char value);
+	bool GetBit(int bit, unsigned char value);
 	unsigned char GetFlags();
 	bool GetFlag(Flag flag);
 	bool GetFlag(Flag flag, unsigned char value);
@@ -31,6 +34,7 @@ public:
 	unsigned char EOR(unsigned char value);
 	unsigned char IN(unsigned char value);
 	unsigned char DE(unsigned char value);
+	unsigned char SLO(unsigned char value);
 	void CMP(unsigned char Register, unsigned char Value);
 	unsigned short answer16;
 	void Execute();
@@ -55,9 +59,14 @@ private:
 	std::string InstName(unsigned char opcode);
 	void PushStack8(unsigned char value);
 	void PushStack16(unsigned short value);
+	void fPHP();
 	unsigned char PopStack();
 	void fPLP(unsigned char value);
 	void BIT(unsigned char value);
 	void fRTS();
 	void fRTI();
+	void fBRK();
+	int cpucycles;
+	std::string ConvertHex(int value);
+	std::ofstream * redirectfile;
 };

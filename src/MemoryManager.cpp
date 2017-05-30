@@ -11,7 +11,7 @@
 #include <iterator>
 #include <assert.h>
 
-#define DISPLAYMEMACTIVITY
+#define DISPLAYMEMACTIVITY1
 
 MemoryManager::MemoryManager()
 {
@@ -225,7 +225,10 @@ void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 	4020-FFFF: Cartridge (All ROM + RAM chips on cartridge as well as other hardware)
 	*/
 	#ifdef DISPLAYMEMACTIVITY
-	std::cout<<"--- 	WRITE	$"<<std::hex<<Location<<" = $"<<(int)Value<<std::endl;
+	if (Location <= 0xFF)
+		std::cout<<"      WRITE     $00"<<std::hex<<Location<<" = $"<<(int)Value<<std::endl;
+	else
+		std::cout<<"      WRITE     $"<<std::hex<<Location<<" = $"<<(int)Value<<std::endl;
 	#endif
 	if (Location >= 0x4020)
 		WriteCartridge(Location,Value);
@@ -300,7 +303,10 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location)
 	*/
 
 	#ifdef DISPLAYMEMACTIVITY
-	std::cout<<"--- 	READ	$"<<std::hex<<Location<<std::endl;
+	if (Location <= 0xFF)
+		std::cout<<"      READ      $00"<<std::hex<<Location<<std::endl;
+	else
+		std::cout<<"      READ      $"<<std::hex<<Location<<std::endl;
 	#endif
 
 	if (Location <=0x1FFF)
@@ -319,7 +325,7 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location,bool Silent)
 {
 	// Will fix this up later, just used to stop the READ text going off - used to display the current CPU state's opcode for debugging
  if (!Silent)
- std::cout<<"READ	$"<<std::hex<<Location<<std::endl;
+ std::cout<<"      READ      $"<<std::hex<<Location<<std::endl;
 
 	/*
 	NES Memory Map:

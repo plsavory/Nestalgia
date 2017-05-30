@@ -2,6 +2,8 @@
 
 // Defines the names of the CPU instructions. Allows the names of the instructions to be used in the source code as well as allowing me to keep track of the emulator development progress.
 
+#define BRK 0x0
+
 // ADC instructions
 #define ADC_IMM 0x69
 #define ADC_ZP 0x65
@@ -233,6 +235,15 @@
 #define TOP5 0x7C
 #define TOP6 0xDC
 #define TOP7 0xFC
+
+// SLO
+#define SLO_ZP 0x07
+#define SLO_ZPX 0x17
+#define SLO_AB 0x0F
+#define SLO_ABX 0x1F
+#define SLO_ABY 0x1B
+#define SLO_INX 0x03
+#define SLO_INY 0x13
 
 namespace M6502
 {
