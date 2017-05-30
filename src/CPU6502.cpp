@@ -44,7 +44,7 @@ void CPU6502::Reset()
 	// Set up the std::cout redirect for logging
 
 	#ifdef LOGCPUTOFILE
-	std::cout<<"Logging CPU activity to CPULog.txt"<<std::endl;
+	std::cout<<"Logging CPU activity to CPULog.log"<<std::endl;
 	redirectfile = new std::ofstream("CPULog.log");
 	std::cout.rdbuf(redirectfile->rdbuf());
 	#endif
@@ -142,8 +142,9 @@ unsigned char CPU6502::ASL(unsigned char value)
 unsigned char CPU6502::LSR(unsigned char value)
 {
 	unsigned char result = value >> 1;
-	SetFlag(Flag::Carry, (value&(1 << 0)));
-	SetFlag(Flag::Sign, (result&(1 << 7)));
+	SetFlag(Flag::Carry, GetBit(0,value));
+	result = SetBit(7,0,result);
+	SetFlag(Flag::Sign, (result>0x7F));
 	SetFlag(Flag::Zero, result == 0x0);
 	return result;
 }
@@ -157,20 +158,15 @@ unsigned char CPU6502::SLO(unsigned char value) {
 
 unsigned char CPU6502::ROL(unsigned char value)
 {
-	unsigned char result = value << 1;
-
 	// Shift carry onto bit 0 and shift the original bit 7 onto the carry
-
-	if (GetFlag(Flag::Carry))
-		result |= 1 << 0;
-	else
-		result &= ~(1 << 0);
-
-	SetFlag(Flag::Carry, value&(1 << 7));
-
-
+	unsigned char result = value << 1;
+	result = SetBit(0,GetFlag(Flag::Carry),result); // Put the current value of the carry flag onto bit 7 of the result
+	SetFlag(Flag::Carry,GetBit(7,value)); // Shift bit 0 of the original value onto the carry flag.
+	SetFlag(Flag::Zero,result == 0);
+	SetFlag(Flag::Sign,result > 0x7F);
 	return result;
 }
+
 unsigned char CPU6502::ROR(unsigned char value)
 {
 	// Shift all bits right by 1
@@ -620,7 +616,7 @@ void CPU6502::Execute()
 		case LSR_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
-			result = LSR(mainMemory->ReadMemory(location));
+			result = LSR(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 6;
 		break;
@@ -813,6 +809,7 @@ void CPU6502::Execute()
 		case STY_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
+			mainMemory->WriteMemory(location16,rY);
 			CyclesRemain = 4;
 		break;
 		// Branch instructions
