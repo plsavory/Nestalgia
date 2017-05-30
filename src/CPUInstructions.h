@@ -70,8 +70,8 @@
 #define DEC_ZPX 0xD6
 #define DEC_AB 0xCE
 #define DEC_ABX 0xDE
-#define DEC_X 0xCA
-#define DEC_Y 0x88
+#define DEX 0xCA
+#define DEY 0x88
 
 // Eclusive OR instructions
 #define EOR_IMM 0x49

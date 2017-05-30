@@ -1,7 +1,6 @@
 #include <iostream>
 #include "MemoryManager.h"
 #include "CPU6502.h"
-#include <cmath>
 
 #define PRINTCPUSTATUS
 
@@ -31,7 +30,7 @@ void CPU6502::Reset()
 	rA = 0x0;
 	//pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
 	pc = 0xC000;
-	sp = 0xFF; // Set the stack pointer
+	sp = 0xFD; // Set the stack pointer
 	SetFlag(Flag::Unused,1);
 	SetFlag(Flag::EInterrupt,1);
 	myState = CPUState::Running;
@@ -50,6 +49,14 @@ bool CPU6502::GetFlag(Flag flag)
 {
 	// Figures out the value of a current flag by AND'ing the flag register against the flag that needs extracting.
 	if (FlagRegister & flag)
+		return true;
+	else
+		return false;
+}
+
+bool CPU6502::SignBit(unsigned char value)
+{
+	if (value & 1 << 7)
 		return true;
 	else
 		return false;
@@ -160,7 +167,7 @@ unsigned char CPU6502::ADC(unsigned char value)
 	// Set the overflow flag if the sign of the addition values are the same, but differ from the sign of the sum result
 	//SetFlag(Flag::Overflow, (~(rA ^ value) & (rA ^ OperationResult)) & 0x80);
 
-	if ((std::signbit(rA) == std::signbit(value)) && (std::signbit(rA) != std::signbit(OperationResult)))
+	if ((SignBit(rA) == SignBit(value)) && (SignBit(rA) != SignBit(OperationResult)))
 		SetFlag(Flag::Overflow,1);
 	else
 		SetFlag(Flag::Overflow,0);
@@ -180,6 +187,20 @@ unsigned char CPU6502::ADC(unsigned char value)
 unsigned char CPU6502::SBC(unsigned char value)
 {
 	return ADC(~value); // Lazy lol - but it works.
+}
+
+unsigned char CPU6502::IN(unsigned char value) {
+	unsigned char result = value+1;
+	SetFlag(Flag::Zero, result == 0);
+	SetFlag(Flag::Sign, result > 0x7F);
+	return result;
+}
+
+unsigned char CPU6502::DE(unsigned char value) {
+	unsigned char result = value-1;
+	SetFlag(Flag::Zero, result == 0);
+	SetFlag(Flag::Sign, result > 0x7F);
+	return result;
 }
 
 unsigned char CPU6502::NB()
@@ -474,6 +495,23 @@ void CPU6502::Execute()
 			rA = SBC(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
 			CyclesRemain = 5+pboundarypassed;
 		break;
+		// Increment instructions
+		case INX:
+			rX = IN(rX);
+			CyclesRemain = 2;
+		break;
+		case INY:
+			rY = IN(rY);
+			CyclesRemain = 2;
+		break;
+		case DEX:
+			rX = DE(rX);
+			CyclesRemain = 2;
+		break;
+		case DEY:
+			rY = DE(rY);
+			CyclesRemain = 2;
+		break;
 		// ASL instructions
 		case ASL_ACC:
 			rA = ASL(rA);
@@ -502,6 +540,151 @@ void CPU6502::Execute()
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
 			result = ASL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 7;
+		break;
+		// LSR functions
+		case LSR_ACC:
+			rA = LSR(rA);
+			CyclesRemain = 2;
+		break;
+		case LSR_ZP:
+			location = mainMemory->ZP(NB());
+			result = LSR(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 5;
+		break;
+		case LSR_ZPX:
+			location = mainMemory->ZP(NB(),rX);
+			result = LSR(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 6;
+		break;
+		case LSR_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			result = LSR(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 6;
+		break;
+		case LSR_ABX:
+			b1 = NB();
+			location16 = mainMemory->AB(rX,b1,NB());
+			result = LSR(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 7;
+		break;
+		// ROL operations
+		case ROL_ACC:
+			rA = ROL(rA);
+			CyclesRemain = 2;
+		break;
+		case ROL_ZP:
+			location = mainMemory->ZP(NB());
+			result = ROL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 5;
+		break;
+		case ROL_ZPX:
+			location = mainMemory->ZP(NB(),rX);
+			result = ROL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 6;
+		break;
+		case ROL_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			result = ROL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 6;
+		break;
+		case ROL_ABX:
+			b1 = NB();
+			location16 = mainMemory->AB(rX,b1,NB());
+			result = ROL(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 7;
+		break;
+		case ROR_ACC:
+			rA = ROR(rA);
+			CyclesRemain = 2;
+		break;
+		case ROR_ZP:
+			location = mainMemory->ZP(NB());
+			result = ROR(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 5;
+		break;
+		case ROR_ZPX:
+			location = mainMemory->ZP(NB(),rX);
+			result = ROR(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 6;
+		break;
+		case ROR_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			result = ROR(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 6;
+		break;
+		case ROR_ABX:
+			b1 = NB();
+			location16 = mainMemory->AB(rX,b1,NB());
+			result = ROR(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 7;
+		break;
+		// INC & DEC Instructions
+		case INC_ZP:
+			location = mainMemory->ZP(NB());
+			result = IN(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 5;
+		break;
+		case INC_ZPX:
+			location = mainMemory->ZP(NB(),rX);
+			result = IN(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 6;
+		break;
+		case INC_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			result = IN(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 6;
+		break;
+		case INC_ABX:
+			b1 = NB();
+			location16 = mainMemory->AB(rX,b1,NB());
+			result = IN(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 7;
+		break;
+		case DEC_ZP:
+			location = mainMemory->ZP(NB());
+			result = DE(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 5;
+		break;
+		case DEC_ZPX:
+			location = mainMemory->ZP(NB(),rX);
+			result = DE(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location,result);
+			CyclesRemain = 6;
+		break;
+		case DEC_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			result = DE(mainMemory->ReadMemory(location));
+			mainMemory->WriteMemory(location16,result);
+			CyclesRemain = 6;
+		break;
+		case DEC_ABX:
+			b1 = NB();
+			location16 = mainMemory->AB(rX,b1,NB());
+			result = DE(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 7;
 		break;
@@ -669,7 +852,7 @@ void CPU6502::Execute()
 		break;
 		case JSR:
 			b1 = NB();
-			PushStack16(pc+3); // Push the location of the next instruction -1 to the stack
+			PushStack16(pc+2); // Push the location of the next instruction -1 to the stack
 			JMP(mainMemory->AB(b1,NB()));
 			CyclesRemain = 6;
 		break;
@@ -677,6 +860,10 @@ void CPU6502::Execute()
 			fRTS();
 			CyclesRemain = 6;
 		break;
+		case RTI:
+			fRTI();
+			CyclesRemain = 6;
+			break;
 		case BIT_ZP:
 			BIT(mainMemory->ReadMemory(mainMemory->ZP(NB())));
 			CyclesRemain = 3;
@@ -798,7 +985,7 @@ void CPU6502::fPLP(unsigned char value) {
 	SetFlag(Flag::EInterrupt,GetFlag(Flag::EInterrupt,value));
 	SetFlag(Flag::BCDMode,GetFlag(Flag::BCDMode,value));
 	SetFlag(Flag::Overflow,GetFlag(Flag::Overflow,value));
-	SetFlag(Flag::Sign,GetFlag(Flag::Overflow,value));
+	SetFlag(Flag::Sign,GetFlag(Flag::Sign,value));
 }
 
 void CPU6502::fRTS()
@@ -807,7 +994,17 @@ void CPU6502::fRTS()
 	unsigned char lo = PopStack();
 	unsigned char hi = PopStack();
 	unsigned short location = (hi << 8) + lo;
-	JMP(location);
+	JMP(location+1); // Add 1 as what should have been pushed to the stack when JSR was called was address-1
+}
+
+void CPU6502::fRTI() {
+	// Return from an interrupt handler
+	unsigned char flags = PopStack();
+	fPLP(flags);
+	unsigned char lo = PopStack();
+	unsigned char hi = PopStack();
+	unsigned short location = (hi << 8) + lo;
+	JMP(location); // Unlike with RTS, the pushed address contains the actual address we need to jump back to.
 }
 
 void CPU6502::BIT(unsigned char value) {
@@ -1039,11 +1236,11 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		case DEC_ABX:
 		RetVal = "DEC_ABX";
 		break;
-		case DEC_X:
-		RetVal = "DEC_X";
+		case DEX:
+		RetVal = "DEX";
 		break;
-		case DEC_Y:
-		RetVal = "DEC_Y";
+		case DEY:
+		RetVal = "DEY";
 		break;
 		case EOR_IMM:
 		RetVal = "EOR_IMM";

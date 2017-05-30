@@ -13,6 +13,7 @@ public:
 	unsigned char GetFlags();
 	bool GetFlag(Flag flag);
 	bool GetFlag(Flag flag, unsigned char value);
+	bool SignBit(unsigned char value);
 	unsigned char GetAcc();
 	unsigned char GetX();
 	unsigned char GetY();
@@ -28,6 +29,8 @@ public:
 	unsigned char SBC(unsigned char value);
 	unsigned char ORA(unsigned char value);
 	unsigned char EOR(unsigned char value);
+	unsigned char IN(unsigned char value);
+	unsigned char DE(unsigned char value);
 	void CMP(unsigned char Register, unsigned char Value);
 	unsigned short answer16;
 	void Execute();
@@ -56,4 +59,5 @@ private:
 	void fPLP(unsigned char value);
 	void BIT(unsigned char value);
 	void fRTS();
+	void fRTI();
 };
