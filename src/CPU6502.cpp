@@ -158,7 +158,6 @@ unsigned char CPU6502::ADC(unsigned char value)
 
 	// Perform the calculation and store it in a 16-bit value
 	unsigned const OperationResult = value + rA + GetFlag(Flag::Carry);
-
 	// Truncate this result down to an 8-bit value - this discards the most significant bit, but we extract it from the 16-bit value later.
 	unsigned char RetVal = (unsigned char) OperationResult;
 
@@ -956,11 +955,63 @@ void CPU6502::Execute()
 			// Do nothing
 			CyclesRemain = 2;
 		break;
+		// Undocumented opcodes from here on outside
+		// NOP Varients
+		case NOP1:
+		case NOP2:
+		case NOP3:
+		case NOP4:
+		case NOP5:
+		case NOP6:
+			CyclesRemain = 2;
+		break;
+		// DOP (Double NOP) (All of these read from the memory address following it, and do nothing with the result)
+		// Actually reading the values to keep consistency with log files
+		case DOP1:
+		case DOP4:
+		case DOP6:
+			mainMemory->ReadMemory(mainMemory->ZP(NB()));
+			CyclesRemain = 3;
+		break;
+		case DOP2:
+		case DOP3:
+		case DOP5:
+		case DOP7:
+		case DOP12:
+		case DOP14:
+		mainMemory->ReadMemory(mainMemory->ZP(NB(),rX));
+		CyclesRemain = 4;
+		break;
+		case DOP8:
+		case DOP9:
+		case DOP10:
+		case DOP11:
+		case DOP13:
+		NB();
+		CyclesRemain = 2;
+		break;
+		// TOP (Triple NOP)
+		case TOP1:
+			b1 = NB();
+			mainMemory->ReadMemory(mainMemory->AB(b1,NB()));
+			CyclesRemain = 4;
+		break;
+		case TOP2:
+		case TOP3:
+		case TOP4:
+		case TOP5:
+		case TOP6:
+		case TOP7:
+			b1 = NB();
+			mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB()));
+			CyclesRemain = 4+pboundarypassed;
+		break;
 		default:
 		if (InstName(opcode) != "UNKNOWN-OPCODE")
 			std::cout<<"CPU-Error: Handler not yet implemented: " << InstName(opcode) << " at: "<<(int)pc<< std::endl;
 			else
 			std::cout<<"CPU-Error: Unknown opcode: $" << std::hex << (int)opcode << " at: "<<(int)pc<< std::endl;
+
 		myState = CPUState::Error;
 		break;
 	}
@@ -1525,6 +1576,40 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		break;
 		case TYA:
 		RetVal = "TYA";
+		break;
+		// Undocumented opcodes from here on out
+		case NOP1:
+		case NOP2:
+		case NOP3:
+		case NOP4:
+		case NOP5:
+		case NOP6:
+		RetVal = "*NOP";
+		break;
+		case DOP1:
+		case DOP2:
+		case DOP3:
+		case DOP4:
+		case DOP5:
+		case DOP6:
+		case DOP7:
+		case DOP8:
+		case DOP9:
+		case DOP10:
+		case DOP11:
+		case DOP12:
+		case DOP13:
+		case DOP14:
+		RetVal = "DOP";
+		break;
+		case TOP1:
+		case TOP2:
+		case TOP3:
+		case TOP4:
+		case TOP5:
+		case TOP6:
+		case TOP7:
+		RetVal = "TOP";
 		break;
 		default:
 		RetVal = "UNKNOWN-OPCODE";

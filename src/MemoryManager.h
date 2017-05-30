@@ -37,6 +37,7 @@ public:
 	unsigned short AB(unsigned char Off, unsigned char Lo, unsigned char Hi);
 	unsigned short ZP(unsigned char Location);
 	unsigned short ZP(unsigned char Location, unsigned char Register);
+	void PrintDebugInfo();
 private:
 	unsigned char MainMemory[0xFFFF];
 	void WriteRAM(unsigned short Location, unsigned char Value);

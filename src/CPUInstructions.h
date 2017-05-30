@@ -196,6 +196,44 @@
 #define TXS 0x9A
 #define TYA 0x98
 
+
+// -----------------------------
+// Start of undocumented opcodes
+// -----------------------------
+
+// Single NOP
+#define NOP1 0x1A
+#define NOP2 0x3A
+#define NOP3 0x5A
+#define NOP4 0x7A
+#define NOP5 0xDA
+#define NOP6 0xFA
+
+// Double NOP
+#define DOP1 0x04
+#define DOP2 0x14
+#define DOP3 0x34
+#define DOP4 0x44
+#define DOP5 0x54
+#define DOP6 0x64
+#define DOP7 0x74
+#define DOP8 0x80
+#define DOP9 0x82
+#define DOP10 0x89
+#define DOP11 0xC2
+#define DOP12 0xD4
+#define DOP13 0xE2
+#define DOP14 0xF4
+
+// Triple NOP
+#define TOP1 0x0C
+#define TOP2 0x1C
+#define TOP3 0x3C
+#define TOP4 0x5C
+#define TOP5 0x7C
+#define TOP6 0xDC
+#define TOP7 0xFC
+
 namespace M6502
 {
 

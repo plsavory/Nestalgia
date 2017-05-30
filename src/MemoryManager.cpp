@@ -204,6 +204,13 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 	return 0;
 }
 
+void MemoryManager::PrintDebugInfo()
+{
+	// Print the first 20 bytes of memory
+	for (int i = 0; i <=20;i++)
+		std::cout<<"$"<<std::hex<<i<<" = $"<<(int)MainMemory[i]<<std::endl;
+}
+
 void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 {
 	// There are no memory mappers emulated at the moment in this version of this emulator - this function is a lot simpler than it eventually will be
@@ -339,8 +346,9 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location,bool Silent)
 unsigned short MemoryManager::IN(unsigned char Lo, unsigned char Hi)
 {
 	// Returns the value stored within the given absolute address
-	unsigned short TargetAddress = AB(Lo, Hi);
-	return (ReadMemory(TargetAddress)) + (ReadMemory(TargetAddress+0x1) << 8);
+	unsigned short TargetAddress1 = AB(Lo, Hi);
+	unsigned short TargetAddress2 = AB(Lo+1,Hi);
+	return (ReadMemory(TargetAddress1)) + (ReadMemory(TargetAddress2) << 8);
 }
 
 unsigned short MemoryManager::INdX(unsigned char rX, unsigned char Loc)
