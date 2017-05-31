@@ -364,7 +364,12 @@ unsigned short MemoryManager::INdX(unsigned char rX, unsigned char Loc)
 
 unsigned short MemoryManager::INdY(unsigned char rY, unsigned char Loc)
 {
-	return (ReadMemory(Loc) + (ReadMemory(Loc+1) << 8)) + rY;
+	//std::cout<<" ("<<(int)Loc<<") + "<<(int)rY<<" = $"<<(int)(ReadMemory(Loc) + (ReadMemory(Loc+1) << 8))<<" + " <<(int)rY<<" = "<<(int)((ReadMemory(Loc) + (ReadMemory(Loc+1) << 8)) + rY)<<" = "<<ReadMemory((ReadMemory(Loc) + (ReadMemory(Loc+1) << 8)) + rY);
+	//unsigned short result = ReadMemory(Loc) + (ReadMemory(Loc+1) << 8) + rY;
+	unsigned short wrapmask = (Loc & 0xFF00) | ((Loc+1) & 0x00FF);
+	unsigned short result = (unsigned short)ReadMemory(Loc) | ((unsigned short)ReadMemory(wrapmask) << 8);
+	result+=(unsigned char)rY;
+	return result ;
 }
 
 unsigned short MemoryManager::AB(unsigned char Lo, unsigned char Hi)

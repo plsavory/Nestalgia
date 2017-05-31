@@ -248,8 +248,13 @@ unsigned char CPU6502::DE(unsigned char value) {
 unsigned char CPU6502::NB()
 {
 	// Get the value of the next byte from Memory
-	return mainMemory->ReadMemory(pc+(dataoffset++));
-	//return mainMemory->ReadMemory(pc++);
+	//return mainMemory->ReadMemory(pc+(dataoffset++));
+	#ifdef PRINTCPUSTATUS
+	std::cout<<" "<<ConvertHex(mainMemory->ReadMemory(pc,1))<<" ";
+	dataoffset++;
+	#endif
+
+	return mainMemory->ReadMemory(pc++);
 }
 
 void CPU6502::Execute()
@@ -259,14 +264,24 @@ void CPU6502::Execute()
 	CyclesRemain = 0; // Remove this later
 	// Print the CPU's current status
 	#ifdef PRINTCPUSTATUS
+	std::ostringstream cpustatestring;
+
 	if (currentInst) // if not null
-		PrintCPUStatus(InstName(currentInst));
+	{
+		// Print out the current state of the PC
+		std::cout<<std::uppercase<<std::hex<<(int)pc<<"   ";
+		cpustatestring <<" "<< std::hex<<std::uppercase<<InstName(currentInst) <<"      A:"<<ConvertHex(rA)<<" X:"<<ConvertHex(rX)<<" Y:"<<ConvertHex(rY)<<" P:"<<(int)FlagRegister<<" SP:"<<(int)sp<<" CPUC:"<<std::dec<<cpucycles<<std::hex<<" -"<<std::endl;
+	}
+		//PrintCPUStatus(InstName(currentInst));
 	#endif
 
 	// Handle interrupts if neccesary (add this later)
 
 	// Fetch the next opcode
 	unsigned char opcode = NB();
+	#ifdef PRINTCPUSTATUS
+	//dataoffset = 0; // This is used only to display the CPU output in the log file now, reset it to 0 here for text alignment.
+	#endif
  	pboundarypassed = 0;
 	jumpoffset = 0;
 
@@ -274,8 +289,6 @@ void CPU6502::Execute()
 	switch (opcode)
 	{
 		// BRK instructions
-
-/*
 		case BRK:
 			NB(); // Increment PC by 1 (2 in this case)
 			PushStack16(pc+3); // Push the location of the next instruction to the stack
@@ -283,7 +296,6 @@ void CPU6502::Execute()
 			JMP(mainMemory->ReadMemory(0xFFFE));
 			CyclesRemain = 7;
 		break;
-		*/
 		// LD_ZP instructions
 		case LDA_ZP:
 			rA = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
@@ -908,7 +920,7 @@ void CPU6502::Execute()
 		break;
 		case JSR:
 			b1 = NB();
-			PushStack16(pc+2); // Push the location of the next instruction -1 to the stack
+			PushStack16(pc); // Push the location of the next instruction -1 to the stack
 			JMP(mainMemory->AB(b1,NB()));
 			CyclesRemain = 6;
 		break;
@@ -1079,17 +1091,33 @@ void CPU6502::Execute()
 		break;
 	}
 
+	// Print the flag values of the CPU before the instructions were executed
+	#ifdef PRINTCPUSTATUS
+
+	// Align the text because I get irritated when it isn't done.
+/*	if (dataoffset == 1)
+		std::cout<<"    "<<"    "<<"    ";
+	else if (dataoffset == 2)
+		std::cout<<"        ";
+*/
+	if (dataoffset == 2)
+		std::cout<<"    ";
+	if (dataoffset == 1)
+		std::cout<<"        ";
+	if (dataoffset == 0)
+		std::cout<<"            ";
+
+	std::cout<<cpustatestring.str();
+	#endif
+
 	// If we have not jumped or branched, increment the pc
-	if (jumpoffset == 0)
-		pc += dataoffset;
-		else
+	if (!jumpoffset == 0)
 		pc = jumpoffset; // If jumpoffset is not 0, the pc will automatically move there for the next cycle - use this for jmp and branch operations.
 
 	// Reset the dataoffset
 	dataoffset = 0;
 
 	// Reduce the remaining cycles variable as we've just done one (put this outside an if statement later to enable cycle accuracy when it is implemented).
-
 	cpucycles += CyclesRemain;
 }
 
@@ -1162,7 +1190,7 @@ void CPU6502::branch(bool value)
 	{
 		unsigned char branchloc = NB();
 		unsigned char branchloc1 = branchloc;
-		dataoffset = 0; // discard previous dataoffset value
+
 		//Get the sign of the value
 		bool sign = (branchloc>0x7F);
 		//branchloc = SetBit(7,0,branchloc); // Set the sign bit to 0 so that we can only jump +127 or -127 from current pc
@@ -1170,12 +1198,13 @@ void CPU6502::branch(bool value)
 		if (sign)
 		{
 			branchloc = ~branchloc;
+			branchloc++;
 			unsigned short bloc1 = branchloc;
-			pc -= (bloc1-2);
+			pc -= (bloc1);
 		}
 			else
 		{
-			pc += branchloc+2;
+			pc += branchloc;
 		}
 
 		 // Dataoffset should = the byte after the instruction
@@ -1192,6 +1221,8 @@ void CPU6502::branch(bool value)
 void CPU6502::PrintCPUStatus(std::string inst_name)
 {
 	std::cout<<std::uppercase<<std::hex<<(int)pc<<"            "<<inst_name;
+
+
 	std::cout<<"      A:"<<ConvertHex(rA)<<" X:"<<ConvertHex(rX)<<" Y:"<<ConvertHex(rY)<<" P:"<<(int)FlagRegister<<" SP:"<<(int)sp<<" CPUC:"<<std::dec<<cpucycles<<std::hex<<std::endl;
 }
 
