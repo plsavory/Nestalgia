@@ -190,6 +190,12 @@ unsigned char CPU6502::LD(unsigned char value)
 	return value;
 }
 
+void CPU6502::LAX(unsigned char value)
+{
+	rA = LD(value);
+	rX = LD(value);
+}
+
 unsigned char CPU6502::ADC(unsigned char value)
 {
 	/*
@@ -1075,6 +1081,33 @@ void CPU6502::Execute()
 			mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB()));
 			CyclesRemain = 4+pboundarypassed;
 		break;
+		// LAX
+		case LAX_ZP:
+			LAX(mainMemory->ReadMemory(mainMemory->ZP(NB())));
+			CyclesRemain = 3;
+		break;
+		case LAX_ZPY:
+			LAX(mainMemory->ReadMemory(mainMemory->ZP(NB(),rY)));
+			CyclesRemain = 4;
+		break;
+		case LAX_AB:
+			b1 = NB();
+			LAX(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
+			CyclesRemain = 4;
+		break;
+		case LAX_ABY:
+			b1 = NB();
+			LAX(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
+			CyclesRemain = 4+pboundarypassed;
+		break;
+		case LAX_INX:
+			LAX(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
+			CyclesRemain = 6;
+		break;
+		case LAX_INY:
+			LAX(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
+			CyclesRemain = 5+pboundarypassed;
+		break;
 		// SLO
 		case SLO_ABY:
 			b1 = NB();
@@ -1747,6 +1780,24 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		case TOP6:
 		case TOP7:
 		RetVal = "TOP    ";
+		break;
+		case LAX_ZP:
+		RetVal = "LAX_ZP ";
+		break;
+		case LAX_ZPY:
+		RetVal = "LAX_ZPY";
+		break;
+		case LAX_AB:
+		RetVal = "LAX_AB ";
+		break;
+		case LAX_ABY:
+		RetVal = "LAX_ABY";
+		break;
+		case LAX_INX:
+		RetVal = "LAX_INX";
+		break;
+		case LAX_INY:
+		RetVal = "LAX_INY";
 		break;
 		case SLO_ZP:
 		RetVal = "SLO_ZP ";

@@ -35,6 +35,7 @@ public:
 	unsigned char IN(unsigned char value);
 	unsigned char DE(unsigned char value);
 	unsigned char SLO(unsigned char value);
+	void LAX(unsigned char value);
 	void CMP(unsigned char Register, unsigned char Value);
 	unsigned short answer16;
 	void Execute();

@@ -236,6 +236,14 @@
 #define TOP6 0xDC
 #define TOP7 0xFC
 
+// LAX
+#define LAX_ZP 0xA7
+#define LAX_ZPY 0xB7
+#define LAX_AB 0xAF
+#define LAX_ABY 0xBF
+#define LAX_INX 0xA3
+#define LAX_INY 0xB3
+
 // SLO
 #define SLO_ZP 0x07
 #define SLO_ZPX 0x17
