@@ -249,6 +249,7 @@ unsigned char CPU6502::NB()
 {
 	// Get the value of the next byte from Memory
 	return mainMemory->ReadMemory(pc+(dataoffset++));
+	//return mainMemory->ReadMemory(pc++);
 }
 
 void CPU6502::Execute()
@@ -585,14 +586,14 @@ void CPU6502::Execute()
 		case ASL_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
-			result = ASL(mainMemory->ReadMemory(location));
+			result = ASL(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 6;
 		break;
 		case ASL_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
-			result = ASL(mainMemory->ReadMemory(location));
+			result = ASL(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 7;
 		break;
@@ -623,7 +624,7 @@ void CPU6502::Execute()
 		case LSR_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
-			result = LSR(mainMemory->ReadMemory(location));
+			result = LSR(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 7;
 		break;
@@ -647,14 +648,14 @@ void CPU6502::Execute()
 		case ROL_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
-			result = ROL(mainMemory->ReadMemory(location));
+			result = ROL(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 6;
 		break;
 		case ROL_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
-			result = ROL(mainMemory->ReadMemory(location));
+			result = ROL(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 7;
 		break;
@@ -677,14 +678,14 @@ void CPU6502::Execute()
 		case ROR_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
-			result = ROR(mainMemory->ReadMemory(location));
+			result = ROR(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 6;
 		break;
 		case ROR_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
-			result = ROR(mainMemory->ReadMemory(location));
+			result = ROR(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 7;
 		break;
@@ -704,14 +705,14 @@ void CPU6502::Execute()
 		case INC_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
-			result = IN(mainMemory->ReadMemory(location));
+			result = IN(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 6;
 		break;
 		case INC_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
-			result = IN(mainMemory->ReadMemory(location));
+			result = IN(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 7;
 		break;
@@ -730,14 +731,14 @@ void CPU6502::Execute()
 		case DEC_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
-			result = DE(mainMemory->ReadMemory(location));
+			result = DE(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 6;
 		break;
 		case DEC_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
-			result = DE(mainMemory->ReadMemory(location));
+			result = DE(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
 			CyclesRemain = 7;
 		break;
@@ -826,6 +827,7 @@ void CPU6502::Execute()
 			branch(GetFlag(Flag::Sign));
 		break;
 		case BNE:
+			//std::cout<<"BNE "<<std::hex<<(int)mainMemory->ReadMemory(pc,true)<<" "<<(int)mainMemory->ReadMemory(pc+1);
 			branch(!GetFlag(Flag::Zero));
 		break;
 		case BPL:
@@ -1159,16 +1161,26 @@ void CPU6502::branch(bool value)
 	if(value)
 	{
 		unsigned char branchloc = NB();
+		unsigned char branchloc1 = branchloc;
+		dataoffset = 0; // discard previous dataoffset value
 		//Get the sign of the value
 		bool sign = (branchloc>0x7F);
+		//branchloc = SetBit(7,0,branchloc); // Set the sign bit to 0 so that we can only jump +127 or -127 from current pc
 
 		if (sign)
-			dataoffset = -branchloc+2;
+		{
+			branchloc = ~branchloc;
+			unsigned short bloc1 = branchloc;
+			pc -= (bloc1-2);
+		}
 			else
-			dataoffset = branchloc+2;
+		{
+			pc += branchloc+2;
+		}
 
 		 // Dataoffset should = the byte after the instruction
 		//std::cout<<"Branching to: "<<std::dec<<(int) dataoffset<<std::endl;
+		//std::cout<<" $"<<(int)branchloc1<<" = $"<<std::hex<<(int)branchloc<<" = "<<(int)pc<<std::endl;
 		CyclesRemain = 3+pboundarypassed;
 	}
 	else {
