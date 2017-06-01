@@ -277,6 +277,33 @@
 #define SLO_INX 0x03
 #define SLO_INY 0x13
 
+// SRE
+#define SRE_ZP 0x47
+#define SRE_ZPX 0x57
+#define SRE_AB 0x4F
+#define SRE_ABX 0x5F
+#define SRE_ABY 0x5B
+#define SRE_INX 0x43
+#define SRE_INY 0x53
+
+// RLA
+#define RLA_ZP 0x27
+#define RLA_ZPX 0x37
+#define RLA_AB 0x2F
+#define RLA_ABX 0x3F
+#define RLA_ABY 0x3B
+#define RLA_INX 0x23
+#define RLA_INY 0x33
+
+// RRA
+#define RRA_ZP 0x67
+#define RRA_ZPX 0x77
+#define RRA_AB 0x6F
+#define RRA_ABX 0x7F
+#define RRA_ABY 0x7B
+#define RRA_INX 0x63
+#define RRA_INY 0x73 
+
 // SBC
 #define SBC_IMM1 0xEB
 

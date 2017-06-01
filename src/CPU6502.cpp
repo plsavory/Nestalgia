@@ -155,6 +155,24 @@ unsigned char CPU6502::SLO(unsigned char value) {
 	return result;
 }
 
+unsigned char CPU6502::SRE(unsigned char value) {
+	unsigned char result = LSR(value);
+	rA = EOR(result);
+	return result;
+}
+
+unsigned char CPU6502::RLA(unsigned char value) {
+	unsigned char result = ROL(value);
+	rA = AND(result);
+	return result;
+}
+
+unsigned char CPU6502::RRA(unsigned char value) {
+	unsigned char result = ROR(value);
+	rA = ADC(result);
+	return result;
+}
+
 unsigned char CPU6502::ROL(unsigned char value)
 {
 	// Shift carry onto bit 0 and shift the original bit 7 onto the carry
@@ -1158,6 +1176,84 @@ void CPU6502::Execute()
 		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
 		CyclesRemain = 8;
 		break;
+		// RLA
+		case RLA_ZP:
+		location = mainMemory->ZP(NB());
+		mainMemory->WriteMemory(location,RLA(mainMemory->ReadMemory(location)));
+		CyclesRemain = 5;
+		break;
+		case RLA_ZPX:
+		location = mainMemory->ZP(NB(),rX);
+		mainMemory->WriteMemory(location,RLA(mainMemory->ReadMemory(location)));
+		CyclesRemain = 6;
+		break;
+		case RLA_AB:
+		b1 = NB();
+		location16 = mainMemory->AB(b1,NB());
+		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 6;
+		break;
+		case RLA_ABX:
+		b1 = NB();
+		location16 = mainMemory->AB(rX,b1,NB());
+		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case RLA_ABY:
+		b1 = NB();
+		location16 = mainMemory->AB(rY,b1,NB());
+		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case RLA_INX:
+		location16 = mainMemory->INdX(rX,NB());
+		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		case RLA_INY:
+		location16 = mainMemory->INdY(rY,NB());
+		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		// RRA
+		case RRA_ZP:
+		location = mainMemory->ZP(NB());
+		mainMemory->WriteMemory(location,RRA(mainMemory->ReadMemory(location)));
+		CyclesRemain = 5;
+		break;
+		case RRA_ZPX:
+		location = mainMemory->ZP(NB(),rX);
+		mainMemory->WriteMemory(location,RRA(mainMemory->ReadMemory(location)));
+		CyclesRemain = 6;
+		break;
+		case RRA_AB:
+		b1 = NB();
+		location16 = mainMemory->AB(b1,NB());
+		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 6;
+		break;
+		case RRA_ABX:
+		b1 = NB();
+		location16 = mainMemory->AB(rX,b1,NB());
+		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case RRA_ABY:
+		b1 = NB();
+		location16 = mainMemory->AB(rY,b1,NB());
+		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case RRA_INX:
+		location16 = mainMemory->INdX(rX,NB());
+		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		case RRA_INY:
+		location16 = mainMemory->INdY(rY,NB());
+		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
 		// SLO
 		case SLO_ZP:
 		location = mainMemory->ZP(NB());
@@ -1195,6 +1291,44 @@ void CPU6502::Execute()
 		case SLO_INY:
 		location16 = mainMemory->INdY(rY,NB());
 		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		case SRE_ZP:
+		location = mainMemory->ZP(NB());
+		mainMemory->WriteMemory(location,SRE(mainMemory->ReadMemory(location)));
+		CyclesRemain = 5;
+		break;
+		case SRE_ZPX:
+		location = mainMemory->ZP(NB(),rX);
+		mainMemory->WriteMemory(location,SRE(mainMemory->ReadMemory(location)));
+		CyclesRemain = 6;
+		break;
+		case SRE_AB:
+		b1 = NB();
+		location16 = mainMemory->AB(b1,NB());
+		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 6;
+		break;
+		case SRE_ABX:
+		b1 = NB();
+		location16 = mainMemory->AB(rX,b1,NB());
+		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case SRE_ABY:
+		b1 = NB();
+		location16 = mainMemory->AB(rY,b1,NB());
+		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case SRE_INX:
+		location16 = mainMemory->INdX(rX,NB());
+		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		case SRE_INY:
+		location16 = mainMemory->INdY(rY,NB());
+		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
 		CyclesRemain = 8;
 		break;
 		// TOP (Triple NOP)
@@ -2009,6 +2143,48 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		case LAX_INY:
 		RetVal = "LAX_INY";
 		break;
+		case RLA_ZP:
+		RetVal = "RLA_ZP ";
+		break;
+		case RLA_ZPX:
+		RetVal = "RLA_ZPX";
+		break;
+		case RLA_AB:
+		RetVal = "RLA_AB ";
+		break;
+		case RLA_ABX:
+		RetVal = "RLA_ABX";
+		break;
+		case RLA_ABY:
+		RetVal = "RLA_ABY";
+		break;
+		case RLA_INX:
+		RetVal = "RLA_INX";
+		break;
+		case RLA_INY:
+		RetVal = "RLA_INY";
+		break;
+		case RRA_ZP:
+		RetVal = "RRA_ZP ";
+		break;
+		case RRA_ZPX:
+		RetVal = "RRA_ZPX";
+		break;
+		case RRA_AB:
+		RetVal = "RRA_AB ";
+		break;
+		case RRA_ABX:
+		RetVal = "RRA_ABX";
+		break;
+		case RRA_ABY:
+		RetVal = "RRA_ABY";
+		break;
+		case RRA_INX:
+		RetVal = "RRA_INX";
+		break;
+		case RRA_INY:
+		RetVal = "RRA_INY";
+		break;
 		case SLO_ZP:
 		RetVal = "SLO_ZP ";
 		break;
@@ -2029,6 +2205,27 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		break;
 		case SLO_INY:
 		RetVal = "SLO_INY";
+		break;
+		case SRE_ZP:
+		RetVal = "SRE_ZP ";
+		break;
+		case SRE_ZPX:
+		RetVal = "SRE_ZPX";
+		break;
+		case SRE_AB:
+		RetVal = "SRE_AB ";
+		break;
+		case SRE_ABX:
+		RetVal = "SRE_ABX";
+		break;
+		case SRE_ABY:
+		RetVal = "SRE_ABY";
+		break;
+		case SRE_INX:
+		RetVal = "SRE_INX";
+		break;
+		case SRE_INY:
+		RetVal = "SRE_INY";
 		break;
 		default:
 		RetVal = "UNKNOWN-OPCODE";
