@@ -203,6 +203,12 @@
 // Start of undocumented opcodes
 // -----------------------------
 
+// AAX
+#define SAX_ZP 0x87
+#define SAX_ZPY 0x97
+#define SAX_INX 0x83
+#define SAX_AB 0x8F
+
 // Single NOP
 #define NOP1 0x1A
 #define NOP2 0x3A
@@ -210,6 +216,15 @@
 #define NOP4 0x7A
 #define NOP5 0xDA
 #define NOP6 0xFA
+
+// DCP
+#define DCP_ZP 0xC7
+#define DCP_ZPX 0xD7
+#define DCP_AB 0xCF
+#define DCP_ABX 0xDF
+#define DCP_ABY 0xDB
+#define DCP_INX 0xC3
+#define DCP_INY 0xD3
 
 // Double NOP
 #define DOP1 0x04
@@ -236,6 +251,15 @@
 #define TOP6 0xDC
 #define TOP7 0xFC
 
+// ISB
+#define ISB_ZP 0xE7
+#define ISB_ZPX 0xF7
+#define ISB_AB 0xEF
+#define ISB_ABX 0xFF
+#define ISB_ABY 0xFB
+#define ISB_INX 0xE3
+#define ISB_INY 0xF3
+
 // LAX
 #define LAX_ZP 0xA7
 #define LAX_ZPY 0xB7
@@ -252,6 +276,9 @@
 #define SLO_ABY 0x1B
 #define SLO_INX 0x03
 #define SLO_INY 0x13
+
+// SBC
+#define SBC_IMM1 0xEB
 
 namespace M6502
 {

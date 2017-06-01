@@ -150,9 +150,8 @@ unsigned char CPU6502::LSR(unsigned char value)
 }
 
 unsigned char CPU6502::SLO(unsigned char value) {
-	unsigned char result = value << 1;
-	result = rA | result;
-
+	unsigned char result = ASL(value);
+	rA = ORA(result);
 	return result;
 }
 
@@ -249,6 +248,23 @@ unsigned char CPU6502::DE(unsigned char value) {
 	SetFlag(Flag::Zero, result == 0);
 	SetFlag(Flag::Sign, result > 0x7F);
 	return result;
+}
+
+unsigned char CPU6502::DCP(unsigned char value) {
+	unsigned char result = value -1;
+	CMP(rA,result);
+	return result;
+}
+
+unsigned char CPU6502::ISB (unsigned char value) {
+	unsigned char result = value + 1;
+	rA = SBC(result);
+	return result;
+}
+
+unsigned char CPU6502::SAX() {
+	unsigned char RetVal = (rX & rA);
+	return RetVal;
 }
 
 unsigned char CPU6502::NB()
@@ -1065,6 +1081,122 @@ void CPU6502::Execute()
 		NB();
 		CyclesRemain = 2;
 		break;
+		case DCP_ZP:
+		location = mainMemory->ZP(NB());
+		mainMemory->WriteMemory(location,DCP(mainMemory->ReadMemory(location)));
+		CyclesRemain = 5;
+		break;
+		case DCP_ZPX:
+		location = mainMemory->ZP(NB(),rX);
+		mainMemory->WriteMemory(location,DCP(mainMemory->ReadMemory(location)));
+		CyclesRemain = 6;
+		break;
+		case DCP_AB:
+		b1 = NB();
+		location16 = mainMemory->AB(b1,NB());
+		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 6;
+		break;
+		case DCP_ABX:
+		b1 = NB();
+		location16 = mainMemory->AB(rX,b1,NB());
+		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case DCP_ABY:
+		b1 = NB();
+		location16 = mainMemory->AB(rY,b1,NB());
+		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case DCP_INX:
+		location16 = mainMemory->INdX(rX,NB());
+		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		case DCP_INY:
+		location16 = mainMemory->INdY(rY,NB());
+		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		// ISB
+		case ISB_ZP:
+		location = mainMemory->ZP(NB());
+		mainMemory->WriteMemory(location,ISB(mainMemory->ReadMemory(location)));
+		CyclesRemain = 5;
+		break;
+		case ISB_ZPX:
+		location = mainMemory->ZP(NB(),rX);
+		mainMemory->WriteMemory(location,ISB(mainMemory->ReadMemory(location)));
+		CyclesRemain = 6;
+		break;
+		case ISB_AB:
+		b1 = NB();
+		location16 = mainMemory->AB(b1,NB());
+		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 6;
+		break;
+		case ISB_ABX:
+		b1 = NB();
+		location16 = mainMemory->AB(rX,b1,NB());
+		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case ISB_ABY:
+		b1 = NB();
+		location16 = mainMemory->AB(rY,b1,NB());
+		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case ISB_INX:
+		location16 = mainMemory->INdX(rX,NB());
+		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		case ISB_INY:
+		location16 = mainMemory->INdY(rY,NB());
+		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		// SLO
+		case SLO_ZP:
+		location = mainMemory->ZP(NB());
+		mainMemory->WriteMemory(location,SLO(mainMemory->ReadMemory(location)));
+		CyclesRemain = 5;
+		break;
+		case SLO_ZPX:
+		location = mainMemory->ZP(NB(),rX);
+		mainMemory->WriteMemory(location,SLO(mainMemory->ReadMemory(location)));
+		CyclesRemain = 6;
+		break;
+		case SLO_AB:
+		b1 = NB();
+		location16 = mainMemory->AB(b1,NB());
+		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 6;
+		break;
+		case SLO_ABX:
+		b1 = NB();
+		location16 = mainMemory->AB(rX,b1,NB());
+		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case SLO_ABY:
+		b1 = NB();
+		location16 = mainMemory->AB(rY,b1,NB());
+		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 7;
+		break;
+		case SLO_INX:
+		location16 = mainMemory->INdX(rX,NB());
+		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
+		case SLO_INY:
+		location16 = mainMemory->INdY(rY,NB());
+		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
+		CyclesRemain = 8;
+		break;
 		// TOP (Triple NOP)
 		case TOP1:
 			b1 = NB();
@@ -1080,6 +1212,28 @@ void CPU6502::Execute()
 			b1 = NB();
 			mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB()));
 			CyclesRemain = 4+pboundarypassed;
+		break;
+		// SAX
+		case SAX_ZP:
+			location = mainMemory->ZP(NB());
+			mainMemory->WriteMemory(location,SAX());
+			CyclesRemain = 3;
+		break;
+		case SAX_ZPY:
+			location = mainMemory->ZP(NB(),rY);
+			mainMemory->WriteMemory(location,SAX());
+			CyclesRemain = 4;
+		break;
+		case SAX_INX:
+			location16 = mainMemory->INdX(rX,NB());
+			mainMemory->WriteMemory(location16,SAX());
+			CyclesRemain = 6;
+		break;
+		case SAX_AB:
+			b1 = NB();
+			location16 = mainMemory->AB(b1,NB());
+			mainMemory->WriteMemory(location16,SAX());
+			CyclesRemain = 4;
 		break;
 		// LAX
 		case LAX_ZP:
@@ -1108,11 +1262,10 @@ void CPU6502::Execute()
 			LAX(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
 			CyclesRemain = 5+pboundarypassed;
 		break;
-		// SLO
-		case SLO_ABY:
-			b1 = NB();
-			rA = SLO(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 7;
+		// SBC
+		case SBC_IMM1:
+			rA = SBC(NB());
+			CyclesRemain = 2;
 		break;
 		default:
 		if (InstName(opcode) != "UNKNOWN-OPCODE")
@@ -1748,6 +1901,48 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		RetVal = "TYA    ";
 		break;
 		// Undocumented opcodes from here on out
+		case DCP_ZP:
+		RetVal = "DCP_ZP";
+		break;
+		case DCP_ZPX:
+		RetVal = "DCP_ZPX";
+		break;
+		case DCP_AB:
+		RetVal = "DCP_AB";
+		break;
+		case DCP_ABX:
+		RetVal = "DCP_ABX";
+		break;
+		case DCP_ABY:
+		RetVal = "DCP_ABY";
+		break;
+		case DCP_INX:
+		RetVal = "DCP_INX";
+		break;
+		case DCP_INY:
+		RetVal = "DCP_INY";
+		break;
+		case ISB_ZP:
+		RetVal = "ISB_ZP ";
+		break;
+		case ISB_ZPX:
+		RetVal = "ISB_ZPX";
+		break;
+		case ISB_AB:
+		RetVal = "ISB_AB ";
+		break;
+		case ISB_ABX:
+		RetVal = "ISB_ABX";
+		break;
+		case ISB_ABY:
+		RetVal = "ISB_ABY";
+		break;
+		case ISB_INX:
+		RetVal = "ISB_INX";
+		break;
+		case ISB_INY:
+		RetVal = "ISB_INY";
+		break;
 		case NOP1:
 		case NOP2:
 		case NOP3:
@@ -1780,6 +1975,21 @@ std::string CPU6502::InstName(unsigned char opcode) {
 		case TOP6:
 		case TOP7:
 		RetVal = "TOP    ";
+		break;
+		case SBC_IMM1:
+		RetVal = "SBC_IMM";
+		break;
+		case SAX_ZP:
+		RetVal = "SAX_ZP ";
+		break;
+		case SAX_ZPY:
+		RetVal = "SAX_ZPY";
+		break;
+		case SAX_INX:
+		RetVal = "SAX_INX";
+		break;
+		case SAX_AB:
+		RetVal = "SAX_AB";
 		break;
 		case LAX_ZP:
 		RetVal = "LAX_ZP ";
