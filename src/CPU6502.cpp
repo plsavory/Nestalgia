@@ -289,8 +289,10 @@ unsigned char CPU6502::NB()
 {
 	// Get the value of the next byte from Memory
 	//return mainMemory->ReadMemory(pc+(dataoffset++));
-	#ifdef PRINTCPUSTATUS
+	#ifdef PRINTCPUSTATUS5
+	if (currentInst) {
 	std::cout<<" "<<ConvertHex(mainMemory->ReadMemory(pc,1))<<" ";
+	}
 	dataoffset++;
 	#endif
 
@@ -300,7 +302,7 @@ unsigned char CPU6502::NB()
 void CPU6502::Execute()
 {
 	// Debug reasons
-	unsigned char currentInst = mainMemory->ReadMemory(pc,1);
+	currentInst = mainMemory->ReadMemory(pc,1);
 	CyclesRemain = 0; // Remove this later
 	// Print the CPU's current status
 	#ifdef PRINTCPUSTATUS
@@ -382,22 +384,22 @@ void CPU6502::Execute()
 		case LDA_ABX:
 			b1 = NB();
 			rA = LD(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case LDA_ABY:
 			b1 = NB();
 			rA = LD(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case LDX_ABY:
 			b1 = NB();
 			rX = LD(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case LDY_ABX:
 			b1 = NB();
 			rY = LD(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		// LD_ZPX instructions
 		case LDA_ZPX:
@@ -419,7 +421,7 @@ void CPU6502::Execute()
 		break;
 		case LDA_INY:
 			rA = LD(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+pboundarypassed;
+			CyclesRemain = 5+mainMemory->pboundarypassed;
 		break;
 		// AND instructions
 		case AND_IMM:
@@ -442,12 +444,12 @@ void CPU6502::Execute()
 		case AND_ABX:
 			b1 = NB();
 			rA = AND(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case AND_ABY:
 			b1 = NB();
 			rA = AND(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case AND_INX:
 			rA = AND(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
@@ -455,7 +457,7 @@ void CPU6502::Execute()
 		break;
 		case AND_INY:
 			rA = AND(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+pboundarypassed;
+			CyclesRemain = 5+mainMemory->pboundarypassed;
 		break;
 		// ORA instructions
 		case ORA_IMM:
@@ -478,12 +480,12 @@ void CPU6502::Execute()
 		case ORA_ABX:
 			b1 = NB();
 			rA = ORA(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case ORA_ABY:
 			b1 = NB();
 			rA = ORA(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case ORA_INX:
 			rA = ORA(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
@@ -491,7 +493,7 @@ void CPU6502::Execute()
 		break;
 		case ORA_INY:
 			rA = ORA(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+pboundarypassed;
+			CyclesRemain = 5+mainMemory->pboundarypassed;
 		break;
 		// EOR instructions
 		case EOR_IMM:
@@ -514,12 +516,12 @@ void CPU6502::Execute()
 		case EOR_ABX:
 			b1 = NB();
 			rA = EOR(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case EOR_ABY:
 			b1 = NB();
 			rA = EOR(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case EOR_INX:
 			rA = EOR(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
@@ -527,7 +529,7 @@ void CPU6502::Execute()
 		break;
 		case EOR_INY:
 			rA = EOR(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+pboundarypassed;
+			CyclesRemain = 5+mainMemory->pboundarypassed;
 		break;
 		// ADC instructions
 		case ADC_IMM:
@@ -550,12 +552,12 @@ void CPU6502::Execute()
 		case ADC_ABX:
 			b1 = NB();
 			rA = ADC(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case ADC_ABY:
 			b1 = NB();
 			rA = ADC(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case ADC_INX:
 			rA = ADC(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
@@ -563,7 +565,7 @@ void CPU6502::Execute()
 		break;
 		case ADC_INY:
 			rA = ADC(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+pboundarypassed;
+			CyclesRemain = 5+mainMemory->pboundarypassed;
 		break;
 		// ABC instructions
 		case SBC_IMM:
@@ -586,12 +588,12 @@ void CPU6502::Execute()
 		case SBC_ABX:
 			b1 = NB();
 			rA = SBC(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case SBC_ABY:
 			b1 = NB();
 			rA = SBC(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case SBC_INX:
 			rA = SBC(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
@@ -599,7 +601,7 @@ void CPU6502::Execute()
 		break;
 		case SBC_INY:
 			rA = SBC(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+pboundarypassed;
+			CyclesRemain = 5+mainMemory->pboundarypassed;
 		break;
 		// Increment instructions
 		case INX:
@@ -1019,12 +1021,12 @@ void CPU6502::Execute()
 		case CMP_ABX:
 			b1 = NB();
 			CMP(rA,mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case CMP_ABY:
 			b1 = NB();
 			CMP(rA,mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case CMP_INX:
 			CMP(rA, mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
@@ -1032,7 +1034,7 @@ void CPU6502::Execute()
 		break;
 		case CMP_INY:
 			CMP(rA, mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+pboundarypassed;
+			CyclesRemain = 5+mainMemory->pboundarypassed;
 		break;
 		case CPX_IMM:
 			CMP(rX,NB());
@@ -1345,7 +1347,7 @@ void CPU6502::Execute()
 		case TOP7:
 			b1 = NB();
 			mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB()));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		// SAX
 		case SAX_ZP:
@@ -1386,7 +1388,7 @@ void CPU6502::Execute()
 		case LAX_ABY:
 			b1 = NB();
 			LAX(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+pboundarypassed;
+			CyclesRemain = 4+mainMemory->pboundarypassed;
 		break;
 		case LAX_INX:
 			LAX(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
@@ -1394,7 +1396,7 @@ void CPU6502::Execute()
 		break;
 		case LAX_INY:
 			LAX(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+pboundarypassed;
+			CyclesRemain = 5+mainMemory->pboundarypassed;
 		break;
 		// SBC
 		case SBC_IMM1:
@@ -1420,6 +1422,8 @@ void CPU6502::Execute()
 	else if (dataoffset == 2)
 		std::cout<<"        ";
 */
+if (currentInst)
+{
 	if (dataoffset == 2)
 		std::cout<<"    ";
 	if (dataoffset == 1)
@@ -1428,6 +1432,7 @@ void CPU6502::Execute()
 		std::cout<<"            ";
 
 	std::cout<<cpustatestring.str();
+	}
 	#endif
 
 	// If we have not jumped or branched, increment the pc
@@ -1510,7 +1515,7 @@ void CPU6502::branch(bool value)
 	{
 		unsigned char branchloc = NB();
 		unsigned char branchloc1 = branchloc;
-
+		unsigned short oldpc = pc;
 		//Get the sign of the value
 		bool sign = (branchloc>0x7F);
 		//branchloc = SetBit(7,0,branchloc); // Set the sign bit to 0 so that we can only jump +127 or -127 from current pc
@@ -1530,6 +1535,11 @@ void CPU6502::branch(bool value)
 		 // Dataoffset should = the byte after the instruction
 		//std::cout<<"Branching to: "<<std::dec<<(int) dataoffset<<std::endl;
 		//std::cout<<" $"<<(int)branchloc1<<" = $"<<std::hex<<(int)branchloc<<" = "<<(int)pc<<std::endl;
+		if ((pc >> 8) != (oldpc >> 8))
+			pboundarypassed = true;
+			else
+			pboundarypassed = false; // Reset it otherwise so that the following instructions don't take too long
+
 		CyclesRemain = 3+pboundarypassed;
 	}
 	else {

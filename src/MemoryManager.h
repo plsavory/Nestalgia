@@ -38,6 +38,7 @@ public:
 	unsigned short ZP(unsigned char Location);
 	unsigned short ZP(unsigned char Location, unsigned char Register);
 	void PrintDebugInfo();
+		bool pboundarypassed; // Holds true if the previous indirect memory operation passed a page boundary, reset otherwise.
 private:
 	unsigned char MainMemory[0xFFFF];
 	void WriteRAM(unsigned short Location, unsigned char Value);

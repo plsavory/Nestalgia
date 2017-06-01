@@ -20,6 +20,8 @@ MemoryManager::MemoryManager()
 	for (int i = 0x0; i <= 0xFFFF; i++)
 		MainMemory[i] = 0x0;
 
+		pboundarypassed = false;
+
 }
 
 
@@ -368,7 +370,16 @@ unsigned short MemoryManager::INdY(unsigned char rY, unsigned char Loc)
 	//unsigned short result = ReadMemory(Loc) + (ReadMemory(Loc+1) << 8) + rY;
 	unsigned short wrapmask = (Loc & 0xFF00) | ((Loc+1) & 0x00FF);
 	unsigned short result = (unsigned short)ReadMemory(Loc) | ((unsigned short)ReadMemory(wrapmask) << 8);
+	unsigned short oldresult = result;
+
 	result+=(unsigned char)rY;
+
+	// Check for a page boundary cross
+	if ((result >> 8) != oldresult >> 8)
+		pboundarypassed = true;
+		else
+		pboundarypassed = false; // Reset it otherwise so that the following instructions don't take too long
+
 	return result ;
 }
 
@@ -382,7 +393,17 @@ unsigned short MemoryManager::AB(unsigned char Lo, unsigned char Hi)
 unsigned short MemoryManager::AB(unsigned char Off, unsigned char Lo, unsigned char Hi)
 {
 	// Used for Absolute X and Absolute Y writes/reads
-	return (unsigned short)Off + ((unsigned short)Lo + (unsigned short)(Hi << 8));
+	unsigned short result = ((unsigned short)Lo + (unsigned short)(Hi << 8));
+	unsigned short oldresult = result;
+
+	result+=Off;
+
+	if ((result >> 8) != oldresult >> 8)
+		pboundarypassed = true;
+		else
+		pboundarypassed = false; // Reset it otherwise so that the following instructions don't take too long
+		
+	return result;
 }
 
 // Having a separate function for zero paged addressing is not strictly necessary, but it does help for debugging and also allows for the overflowing of a ZP address to happen naturally.

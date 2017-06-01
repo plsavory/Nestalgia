@@ -76,4 +76,5 @@ private:
 	int cpucycles;
 	std::string ConvertHex(int value);
 	std::ofstream * redirectfile;
+	unsigned char currentInst;
 };
