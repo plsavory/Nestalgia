@@ -6,7 +6,7 @@ class MainSystem
 public:
   MainSystem();
   ~MainSystem();
-  void LoadROM(std::string ROMFile);
+  bool LoadROM(std::string ROMFile);
   void Execute();
   void Reset();
   void Run();

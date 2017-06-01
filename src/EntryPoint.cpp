@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include <SFML/Window.hpp>
 #include "ProjectInfo.h"
 #include "MainSystem.h"
 
@@ -7,6 +9,7 @@ int main(int argc, char* argv[]) {
 
 // Print the version string to the console window
 std::cout<<PROJECT_NAME<<" "<<PROJECT_VERSION<<PROJECT_OS<<PROJECT_ARCH<< " (Compiled: " << __DATE__ << " - " << __TIME__ <<  ") "<< " starting..." << std::endl;
+
 
 MainSystem emulator;
 
@@ -18,10 +21,9 @@ if (argc == 1)
   else
   ROMFile = std::string(argv[1]);
 
-
-// Initialize the SFML system and pass the window handle on to the emulator object for further use.
-
-emulator.LoadROM(ROMFile);
+// Load the ROM file for the emulator to run, if there was no error start running it.
+if (emulator.LoadROM(ROMFile))
+  emulator.Run();
 
 return EXIT_SUCCESS;
  }
