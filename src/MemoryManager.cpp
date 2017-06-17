@@ -1,5 +1,9 @@
 
 #include <iostream>
+#include <SFML/System.hpp>
+#include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
+#include "PPU.h"
 #include "MemoryManager.h"
 #include <fstream>
 #include <sstream>
@@ -13,9 +17,10 @@
 
 #define DISPLAYMEMACTIVITY1
 
-MemoryManager::MemoryManager()
+MemoryManager::MemoryManager(PPU &mPPU)
 {
 	mapper = MemoryMapper::Test;
+	mainPPU = &mPPU; // Store a reference to the passed-on PPU object
 
 	for (int i = 0x0; i <= 0xFFFF; i++)
 		MainMemory[i] = 0x0;
@@ -343,11 +348,22 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location,bool Silent)
 		return MainMemory[Location];
 	}
 
+	if ((Location >= 0x2000) && (Location <= 0x3FFF))
+	{
+		return ReadPPU(Location);
+	}
+
 	if (Location >= 0x4020)
 	{
 		return ReadCartridge(Location);
 	}
 	return 0x0;
+}
+
+unsigned char MemoryManager::ReadPPU(unsigned short Location) {
+	Location &=0x2007;
+	Location -=0x2000; // There are 8 PPU registers to read/write, so we can easily find out which one here
+	return mainPPU->Registers[Location];
 }
 
 // These need access to the current MemoryManager state, so delare them as class functions
@@ -402,7 +418,7 @@ unsigned short MemoryManager::AB(unsigned char Off, unsigned char Lo, unsigned c
 		pboundarypassed = true;
 		else
 		pboundarypassed = false; // Reset it otherwise so that the following instructions don't take too long
-		
+
 	return result;
 }
 

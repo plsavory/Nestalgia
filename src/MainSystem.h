@@ -1,3 +1,7 @@
+#include <SFML/System.hpp>
+#include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
+#include "PPU.h"
 #include "MemoryManager.h"
 #include "CPU6502.h"
 
@@ -13,4 +17,5 @@ public:
 private:
   MemoryManager *mainMemory;
   CPU6502 *mainCPU;
+  PPU *mainPPU;
 };

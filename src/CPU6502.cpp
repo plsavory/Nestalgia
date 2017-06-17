@@ -2,11 +2,15 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <SFML/System.hpp>
+#include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
+#include "PPU.h"
 #include "MemoryManager.h"
 #include "CPU6502.h"
 
-#define LOGCPUTOFILE
-#define PRINTCPUSTATUS
+#define LOGCPUTOFILE3
+#define PRINTCPUSTATUS3
 
 CPU6502::CPU6502(MemoryManager &mManager)
 {
@@ -33,12 +37,13 @@ void CPU6502::Reset()
 	rX = 0x0;
 	rY = 0x0;
 	rA = 0x0;
-	//pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
-	pc = 0xC000;
+	pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
+	//pc = 0xC000; - For nestest.nes automatic tests
 	sp = 0xFD; // Set the stack pointer
 	SetFlag(Flag::Unused,1);
 	SetFlag(Flag::EInterrupt,1);
 	myState = CPUState::Running;
+	cpucycles = 0;
 
 	// Set up CPU logging (if it is enabled)
 	// Set up the std::cout redirect for logging
@@ -299,11 +304,11 @@ unsigned char CPU6502::NB()
 	return mainMemory->ReadMemory(pc++);
 }
 
-void CPU6502::Execute()
+int CPU6502::Execute()
 {
 	// Debug reasons
 	currentInst = mainMemory->ReadMemory(pc,1);
-	CyclesRemain = 0; // Remove this later
+	CyclesTaken = 0; // Remove this later
 	// Print the CPU's current status
 	#ifdef PRINTCPUSTATUS
 	std::ostringstream cpustatestring;
@@ -336,536 +341,536 @@ void CPU6502::Execute()
 			PushStack16(pc+3); // Push the location of the next instruction to the stack
 			fBRK(); // Push the status register
 			JMP(mainMemory->ReadMemory(0xFFFE));
-			CyclesRemain = 7;
+			CyclesTaken = 7;
 		break;
 		// LD_ZP instructions
 		case LDA_ZP:
 			rA = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case LDX_ZP:
 			rX = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case LDY_ZP:
 			rY = LD(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		// LD_IMM instructions
 		case LDA_IMM:
 			rA = LD(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case LDX_IMM:
 			rX = LD(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case LDY_IMM:
 			rY = LD(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		// LD_AB instructions
 		case LDA_AB:
 			b1 = NB(); // Get first byte of next address
 			rA = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case LDX_AB:
 			b1 = NB();
 			rX = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case LDY_AB:
 			b1 = NB();
 			rY = LD(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		// LD_ABX/Y instructions
 		case LDA_ABX:
 			b1 = NB();
 			rA = LD(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case LDA_ABY:
 			b1 = NB();
 			rA = LD(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case LDX_ABY:
 			b1 = NB();
 			rX = LD(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case LDY_ABX:
 			b1 = NB();
 			rY = LD(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		// LD_ZPX instructions
 		case LDA_ZPX:
 			rA = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case LDX_ZPY:
 			rX = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rY)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case LDY_ZPX:
 			rY = LD(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		// LDA_IN instructions
 		case LDA_INX:
 			rA = LD(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case LDA_INY:
 			rA = LD(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+mainMemory->pboundarypassed;
+			CyclesTaken = 5+mainMemory->pboundarypassed;
 		break;
 		// AND instructions
 		case AND_IMM:
 			rA = AND(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case AND_ZP:
 			rA = AND(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case AND_ZPX:
 			rA = AND(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case AND_AB:
 			b1 = NB();
 			rA = AND(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case AND_ABX:
 			b1 = NB();
 			rA = AND(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case AND_ABY:
 			b1 = NB();
 			rA = AND(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case AND_INX:
 			rA = AND(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case AND_INY:
 			rA = AND(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+mainMemory->pboundarypassed;
+			CyclesTaken = 5+mainMemory->pboundarypassed;
 		break;
 		// ORA instructions
 		case ORA_IMM:
 			rA = ORA(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case ORA_ZP:
 			rA = ORA(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case ORA_ZPX:
 			rA = ORA(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case ORA_AB:
 			b1 = NB();
 			rA = ORA(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case ORA_ABX:
 			b1 = NB();
 			rA = ORA(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case ORA_ABY:
 			b1 = NB();
 			rA = ORA(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case ORA_INX:
 			rA = ORA(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case ORA_INY:
 			rA = ORA(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+mainMemory->pboundarypassed;
+			CyclesTaken = 5+mainMemory->pboundarypassed;
 		break;
 		// EOR instructions
 		case EOR_IMM:
 			rA = EOR(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case EOR_ZP:
 			rA = EOR(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case EOR_ZPX:
 			rA = EOR(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case EOR_AB:
 			b1 = NB();
 			rA = EOR(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case EOR_ABX:
 			b1 = NB();
 			rA = EOR(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case EOR_ABY:
 			b1 = NB();
 			rA = EOR(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case EOR_INX:
 			rA = EOR(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case EOR_INY:
 			rA = EOR(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+mainMemory->pboundarypassed;
+			CyclesTaken = 5+mainMemory->pboundarypassed;
 		break;
 		// ADC instructions
 		case ADC_IMM:
 			rA = ADC(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case ADC_ZP:
 			rA = ADC(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case ADC_ZPX:
 			rA = ADC(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case ADC_AB:
 			b1 = NB();
 			rA = ADC(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case ADC_ABX:
 			b1 = NB();
 			rA = ADC(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case ADC_ABY:
 			b1 = NB();
 			rA = ADC(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case ADC_INX:
 			rA = ADC(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case ADC_INY:
 			rA = ADC(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+mainMemory->pboundarypassed;
+			CyclesTaken = 5+mainMemory->pboundarypassed;
 		break;
 		// ABC instructions
 		case SBC_IMM:
 			rA = SBC(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case SBC_ZP:
 			rA = SBC(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case SBC_ZPX:
 			rA = SBC(mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case SBC_AB:
 			b1 = NB();
 			rA = SBC(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case SBC_ABX:
 			b1 = NB();
 			rA = SBC(mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case SBC_ABY:
 			b1 = NB();
 			rA = SBC(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case SBC_INX:
 			rA = SBC(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case SBC_INY:
 			rA = SBC(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+mainMemory->pboundarypassed;
+			CyclesTaken = 5+mainMemory->pboundarypassed;
 		break;
 		// Increment instructions
 		case INX:
 			rX = IN(rX);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case INY:
 			rY = IN(rY);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case DEX:
 			rX = DE(rX);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case DEY:
 			rY = DE(rY);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		// ASL instructions
 		case ASL_ACC:
 			rA = ASL(rA);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case ASL_ZP:
 			location = mainMemory->ZP(NB());
 			result = ASL(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 5;
+			CyclesTaken = 5;
 		break;
 		case ASL_ZPX:
 			location = mainMemory->ZP(NB(),rX);
 			result = ASL(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case ASL_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			result = ASL(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case ASL_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
 			result = ASL(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 7;
+			CyclesTaken = 7;
 		break;
 		// LSR functions
 		case LSR_ACC:
 			rA = LSR(rA);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case LSR_ZP:
 			location = mainMemory->ZP(NB());
 			result = LSR(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 5;
+			CyclesTaken = 5;
 		break;
 		case LSR_ZPX:
 			location = mainMemory->ZP(NB(),rX);
 			result = LSR(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case LSR_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			result = LSR(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case LSR_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
 			result = LSR(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 7;
+			CyclesTaken = 7;
 		break;
 		// ROL operations
 		case ROL_ACC:
 			rA = ROL(rA);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case ROL_ZP:
 			location = mainMemory->ZP(NB());
 			result = ROL(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 5;
+			CyclesTaken = 5;
 		break;
 		case ROL_ZPX:
 			location = mainMemory->ZP(NB(),rX);
 			result = ROL(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case ROL_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			result = ROL(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case ROL_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
 			result = ROL(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 7;
+			CyclesTaken = 7;
 		break;
 		case ROR_ACC:
 			rA = ROR(rA);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case ROR_ZP:
 			location = mainMemory->ZP(NB());
 			result = ROR(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 5;
+			CyclesTaken = 5;
 		break;
 		case ROR_ZPX:
 			location = mainMemory->ZP(NB(),rX);
 			result = ROR(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case ROR_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			result = ROR(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case ROR_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
 			result = ROR(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 7;
+			CyclesTaken = 7;
 		break;
 		// INC & DEC Instructions
 		case INC_ZP:
 			location = mainMemory->ZP(NB());
 			result = IN(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 5;
+			CyclesTaken = 5;
 		break;
 		case INC_ZPX:
 			location = mainMemory->ZP(NB(),rX);
 			result = IN(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case INC_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			result = IN(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case INC_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
 			result = IN(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 7;
+			CyclesTaken = 7;
 		break;
 		case DEC_ZP:
 			location = mainMemory->ZP(NB());
 			result = DE(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 5;
+			CyclesTaken = 5;
 		break;
 		case DEC_ZPX:
 			location = mainMemory->ZP(NB(),rX);
 			result = DE(mainMemory->ReadMemory(location));
 			mainMemory->WriteMemory(location,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case DEC_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			result = DE(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case DEC_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
 			result = DE(mainMemory->ReadMemory(location16));
 			mainMemory->WriteMemory(location16,result);
-			CyclesRemain = 7;
+			CyclesTaken = 7;
 		break;
 		// Store operations
 		case STA_ZP:
 			location = mainMemory->ZP(NB());
 			mainMemory->WriteMemory(location,rA);
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case STA_ZPX:
 			location = mainMemory->ZP(NB(),rX);
 			mainMemory->WriteMemory(location,rA);
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case STA_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			mainMemory->WriteMemory(location16,rA);
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case STA_ABX:
 			b1 = NB();
 			location16 = mainMemory->AB(rX,b1,NB());
 			mainMemory->WriteMemory(location16,rA);
-			CyclesRemain = 5;
+			CyclesTaken = 5;
 		break;
 		case STA_ABY:
 			b1 = NB();
 			location16 = mainMemory->AB(rY,b1,NB());
 			mainMemory->WriteMemory(location16,rA);
-			CyclesRemain = 5;
+			CyclesTaken = 5;
 		break;
 		case STA_INX:
 			location16 = mainMemory->INdX(rX,NB());
 			mainMemory->WriteMemory(location16,rA);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case STA_INY:
 			location16 = mainMemory->INdY(rY,NB());
 			mainMemory->WriteMemory(location16,rA);
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case STX_ZP:
 			location = mainMemory->ZP(NB());
 			mainMemory->WriteMemory(location,rX);
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case STX_ZPY:
 			location = mainMemory->ZP(NB(),rY);
 			mainMemory->WriteMemory(location,rX);
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case STX_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			mainMemory->WriteMemory(location16,rX);
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case STY_ZP:
 			location = mainMemory->ZP(NB());
 			mainMemory->WriteMemory(location,rY);
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case STY_ZPX:
 			location = mainMemory->ZP(NB(),rX);
 			mainMemory->WriteMemory(location,rY);
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case STY_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			mainMemory->WriteMemory(location16,rY);
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		// Branch instructions
 		case BCC:
@@ -896,175 +901,175 @@ void CPU6502::Execute()
 		// Transfer instructions
 		case TAX:
 			rX = LD(rA);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case TAY:
 			rY = LD(rA);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case TXA:
 			rA = LD(rX);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case TYA:
 			rA = LD(rY);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case TSX:
 			rX = LD(sp);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case TXS:
 			sp = rX; // Does not effect flags
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		// Clear Flag instructions
 		case CLC:
 			SetFlag(Flag::Carry,0);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case CLV:
 			SetFlag(Flag::Overflow,0);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case CLD:
 			SetFlag(Flag::BCDMode,0);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case CLI:
 			SetFlag(Flag::EInterrupt,0);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		// Set Flag instructions
 		case SEC:
 			SetFlag(Flag::Carry,1);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case SED:
 			SetFlag(Flag::BCDMode,1);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case SEI:
 			SetFlag(Flag::EInterrupt,1);
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		// JMP instructions
 		case JMP_AB:
 			b1 = NB();
 			JMP(mainMemory->AB(b1,NB()));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case JMP_IN:
 		// Jump to the target address which is contained in the memory address after the byte.
 		b1 = NB();
 		JMP(mainMemory->IN(b1,NB()));
-		CyclesRemain = 5;
+		CyclesTaken = 5;
 		break;
 		case JSR:
 			b1 = NB();
 			PushStack16(pc); // Push the location of the next instruction -1 to the stack
 			JMP(mainMemory->AB(b1,NB()));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case RTS:
 			fRTS();
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case RTI:
 			fRTI();
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 			break;
 		case BIT_ZP:
 			BIT(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case BIT_AB:
 			b1 = NB();
 			BIT(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		// Stack operations
 		case PHA:
 			PushStack8(rA);
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case PHP:
 			fPHP();
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case PLA:
 			rA = LD(PopStack());
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case PLP:
 			fPLP(PopStack());
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		// CMP Instructions
 		case CMP_IMM:
 			CMP(rA,NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case CMP_ZP:
 			CMP(rA,mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case CMP_ZPX:
 			CMP(rA,mainMemory->ReadMemory(mainMemory->ZP(NB(),rX)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case CMP_AB:
 			b1 = NB();
 			CMP(rA,mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case CMP_ABX:
 			b1 = NB();
 			CMP(rA,mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case CMP_ABY:
 			b1 = NB();
 			CMP(rA,mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case CMP_INX:
 			CMP(rA, mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case CMP_INY:
 			CMP(rA, mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+mainMemory->pboundarypassed;
+			CyclesTaken = 5+mainMemory->pboundarypassed;
 		break;
 		case CPX_IMM:
 			CMP(rX,NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case CPX_ZP:
 			CMP(rX,mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case CPX_AB:
 			b1 = NB();
 			CMP(rX,mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case CPY_IMM:
 			CMP(rY,NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		case CPY_ZP:
 			CMP(rY,mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case CPY_AB:
 			b1 = NB();
 			CMP(rY,mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case NOP:
 			// Do nothing
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		// Undocumented opcodes from here on outside
 		// NOP Varients
@@ -1074,7 +1079,7 @@ void CPU6502::Execute()
 		case NOP4:
 		case NOP5:
 		case NOP6:
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		// DOP (Double NOP) (All of these read from the memory address following it, and do nothing with the result)
 		// Actually reading the values to keep consistency with log files
@@ -1082,7 +1087,7 @@ void CPU6502::Execute()
 		case DOP4:
 		case DOP6:
 			mainMemory->ReadMemory(mainMemory->ZP(NB()));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case DOP2:
 		case DOP3:
@@ -1091,7 +1096,7 @@ void CPU6502::Execute()
 		case DOP12:
 		case DOP14:
 		mainMemory->ReadMemory(mainMemory->ZP(NB(),rX));
-		CyclesRemain = 4;
+		CyclesTaken = 4;
 		break;
 		case DOP8:
 		case DOP9:
@@ -1099,245 +1104,245 @@ void CPU6502::Execute()
 		case DOP11:
 		case DOP13:
 		NB();
-		CyclesRemain = 2;
+		CyclesTaken = 2;
 		break;
 		case DCP_ZP:
 		location = mainMemory->ZP(NB());
 		mainMemory->WriteMemory(location,DCP(mainMemory->ReadMemory(location)));
-		CyclesRemain = 5;
+		CyclesTaken = 5;
 		break;
 		case DCP_ZPX:
 		location = mainMemory->ZP(NB(),rX);
 		mainMemory->WriteMemory(location,DCP(mainMemory->ReadMemory(location)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case DCP_AB:
 		b1 = NB();
 		location16 = mainMemory->AB(b1,NB());
 		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case DCP_ABX:
 		b1 = NB();
 		location16 = mainMemory->AB(rX,b1,NB());
 		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case DCP_ABY:
 		b1 = NB();
 		location16 = mainMemory->AB(rY,b1,NB());
 		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case DCP_INX:
 		location16 = mainMemory->INdX(rX,NB());
 		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		case DCP_INY:
 		location16 = mainMemory->INdY(rY,NB());
 		mainMemory->WriteMemory(location16,DCP(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		// ISB
 		case ISB_ZP:
 		location = mainMemory->ZP(NB());
 		mainMemory->WriteMemory(location,ISB(mainMemory->ReadMemory(location)));
-		CyclesRemain = 5;
+		CyclesTaken = 5;
 		break;
 		case ISB_ZPX:
 		location = mainMemory->ZP(NB(),rX);
 		mainMemory->WriteMemory(location,ISB(mainMemory->ReadMemory(location)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case ISB_AB:
 		b1 = NB();
 		location16 = mainMemory->AB(b1,NB());
 		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case ISB_ABX:
 		b1 = NB();
 		location16 = mainMemory->AB(rX,b1,NB());
 		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case ISB_ABY:
 		b1 = NB();
 		location16 = mainMemory->AB(rY,b1,NB());
 		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case ISB_INX:
 		location16 = mainMemory->INdX(rX,NB());
 		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		case ISB_INY:
 		location16 = mainMemory->INdY(rY,NB());
 		mainMemory->WriteMemory(location16,ISB(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		// RLA
 		case RLA_ZP:
 		location = mainMemory->ZP(NB());
 		mainMemory->WriteMemory(location,RLA(mainMemory->ReadMemory(location)));
-		CyclesRemain = 5;
+		CyclesTaken = 5;
 		break;
 		case RLA_ZPX:
 		location = mainMemory->ZP(NB(),rX);
 		mainMemory->WriteMemory(location,RLA(mainMemory->ReadMemory(location)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case RLA_AB:
 		b1 = NB();
 		location16 = mainMemory->AB(b1,NB());
 		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case RLA_ABX:
 		b1 = NB();
 		location16 = mainMemory->AB(rX,b1,NB());
 		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case RLA_ABY:
 		b1 = NB();
 		location16 = mainMemory->AB(rY,b1,NB());
 		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case RLA_INX:
 		location16 = mainMemory->INdX(rX,NB());
 		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		case RLA_INY:
 		location16 = mainMemory->INdY(rY,NB());
 		mainMemory->WriteMemory(location16,RLA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		// RRA
 		case RRA_ZP:
 		location = mainMemory->ZP(NB());
 		mainMemory->WriteMemory(location,RRA(mainMemory->ReadMemory(location)));
-		CyclesRemain = 5;
+		CyclesTaken = 5;
 		break;
 		case RRA_ZPX:
 		location = mainMemory->ZP(NB(),rX);
 		mainMemory->WriteMemory(location,RRA(mainMemory->ReadMemory(location)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case RRA_AB:
 		b1 = NB();
 		location16 = mainMemory->AB(b1,NB());
 		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case RRA_ABX:
 		b1 = NB();
 		location16 = mainMemory->AB(rX,b1,NB());
 		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case RRA_ABY:
 		b1 = NB();
 		location16 = mainMemory->AB(rY,b1,NB());
 		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case RRA_INX:
 		location16 = mainMemory->INdX(rX,NB());
 		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		case RRA_INY:
 		location16 = mainMemory->INdY(rY,NB());
 		mainMemory->WriteMemory(location16,RRA(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		// SLO
 		case SLO_ZP:
 		location = mainMemory->ZP(NB());
 		mainMemory->WriteMemory(location,SLO(mainMemory->ReadMemory(location)));
-		CyclesRemain = 5;
+		CyclesTaken = 5;
 		break;
 		case SLO_ZPX:
 		location = mainMemory->ZP(NB(),rX);
 		mainMemory->WriteMemory(location,SLO(mainMemory->ReadMemory(location)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case SLO_AB:
 		b1 = NB();
 		location16 = mainMemory->AB(b1,NB());
 		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case SLO_ABX:
 		b1 = NB();
 		location16 = mainMemory->AB(rX,b1,NB());
 		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case SLO_ABY:
 		b1 = NB();
 		location16 = mainMemory->AB(rY,b1,NB());
 		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case SLO_INX:
 		location16 = mainMemory->INdX(rX,NB());
 		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		case SLO_INY:
 		location16 = mainMemory->INdY(rY,NB());
 		mainMemory->WriteMemory(location16,SLO(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		case SRE_ZP:
 		location = mainMemory->ZP(NB());
 		mainMemory->WriteMemory(location,SRE(mainMemory->ReadMemory(location)));
-		CyclesRemain = 5;
+		CyclesTaken = 5;
 		break;
 		case SRE_ZPX:
 		location = mainMemory->ZP(NB(),rX);
 		mainMemory->WriteMemory(location,SRE(mainMemory->ReadMemory(location)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case SRE_AB:
 		b1 = NB();
 		location16 = mainMemory->AB(b1,NB());
 		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 6;
+		CyclesTaken = 6;
 		break;
 		case SRE_ABX:
 		b1 = NB();
 		location16 = mainMemory->AB(rX,b1,NB());
 		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case SRE_ABY:
 		b1 = NB();
 		location16 = mainMemory->AB(rY,b1,NB());
 		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 7;
+		CyclesTaken = 7;
 		break;
 		case SRE_INX:
 		location16 = mainMemory->INdX(rX,NB());
 		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		case SRE_INY:
 		location16 = mainMemory->INdY(rY,NB());
 		mainMemory->WriteMemory(location16,SRE(mainMemory->ReadMemory(location16)));
-		CyclesRemain = 8;
+		CyclesTaken = 8;
 		break;
 		// TOP (Triple NOP)
 		case TOP1:
 			b1 = NB();
 			mainMemory->ReadMemory(mainMemory->AB(b1,NB()));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case TOP2:
 		case TOP3:
@@ -1347,61 +1352,61 @@ void CPU6502::Execute()
 		case TOP7:
 			b1 = NB();
 			mainMemory->ReadMemory(mainMemory->AB(rX,b1,NB()));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		// SAX
 		case SAX_ZP:
 			location = mainMemory->ZP(NB());
 			mainMemory->WriteMemory(location,SAX());
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case SAX_ZPY:
 			location = mainMemory->ZP(NB(),rY);
 			mainMemory->WriteMemory(location,SAX());
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case SAX_INX:
 			location16 = mainMemory->INdX(rX,NB());
 			mainMemory->WriteMemory(location16,SAX());
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case SAX_AB:
 			b1 = NB();
 			location16 = mainMemory->AB(b1,NB());
 			mainMemory->WriteMemory(location16,SAX());
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		// LAX
 		case LAX_ZP:
 			LAX(mainMemory->ReadMemory(mainMemory->ZP(NB())));
-			CyclesRemain = 3;
+			CyclesTaken = 3;
 		break;
 		case LAX_ZPY:
 			LAX(mainMemory->ReadMemory(mainMemory->ZP(NB(),rY)));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case LAX_AB:
 			b1 = NB();
 			LAX(mainMemory->ReadMemory(mainMemory->AB(b1,NB())));
-			CyclesRemain = 4;
+			CyclesTaken = 4;
 		break;
 		case LAX_ABY:
 			b1 = NB();
 			LAX(mainMemory->ReadMemory(mainMemory->AB(rY,b1,NB())));
-			CyclesRemain = 4+mainMemory->pboundarypassed;
+			CyclesTaken = 4+mainMemory->pboundarypassed;
 		break;
 		case LAX_INX:
 			LAX(mainMemory->ReadMemory(mainMemory->INdX(rX,NB())));
-			CyclesRemain = 6;
+			CyclesTaken = 6;
 		break;
 		case LAX_INY:
 			LAX(mainMemory->ReadMemory(mainMemory->INdY(rY,NB())));
-			CyclesRemain = 5+mainMemory->pboundarypassed;
+			CyclesTaken = 5+mainMemory->pboundarypassed;
 		break;
 		// SBC
 		case SBC_IMM1:
 			rA = SBC(NB());
-			CyclesRemain = 2;
+			CyclesTaken = 2;
 		break;
 		default:
 		if (InstName(opcode) != "UNKNOWN-OPCODE")
@@ -1443,7 +1448,10 @@ if (currentInst)
 	dataoffset = 0;
 
 	// Reduce the remaining cycles variable as we've just done one (put this outside an if statement later to enable cycle accuracy when it is implemented).
-	cpucycles += CyclesRemain;
+	cpucycles += CyclesTaken;
+
+	// Return the number of cycles the CPU has gone through to the main emulator object
+	return CyclesTaken;
 }
 
 void CPU6502::fPLP(unsigned char value) {
@@ -1540,10 +1548,10 @@ void CPU6502::branch(bool value)
 			else
 			pboundarypassed = false; // Reset it otherwise so that the following instructions don't take too long
 
-		CyclesRemain = 3+pboundarypassed;
+		CyclesTaken = 3+pboundarypassed;
 	}
 	else {
-	CyclesRemain = 2;
+	CyclesTaken = 2;
 	NB(); // Skip the next byte as it is data for the branch instruction.
 	}
 }

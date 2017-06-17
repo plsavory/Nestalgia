@@ -1,4 +1,8 @@
 #include <iostream>
+#include <SFML/System.hpp>
+#include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
+#include "PPU.h"
 #include "MemoryManager.h"
 
 // Functions for reading from specific memory mappers go here.

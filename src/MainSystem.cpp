@@ -1,12 +1,12 @@
 #include "ProjectInfo.h"
 #include <sstream>
 #include <iostream>
-#include <SFML/Window.hpp>
 #include "MainSystem.h"
 
 MainSystem::MainSystem()
 {
-  mainMemory = new MemoryManager();
+  mainPPU = new PPU();
+  mainMemory = new MemoryManager(*mainPPU);
   mainCPU = new CPU6502(*mainMemory);
 }
 
@@ -24,6 +24,22 @@ void MainSystem::Execute() {
 
   // PAL Master clock: 21.48MHz, NTSC master clock: 26.60mhz.
   // CPU Clock: Master/12 (NTSC), Master/16 (PAL)
+  // Only NTSC is supported right now - will add PAL timings in future.
+  const double MasterClocksPerFrame = 21477272/60;
+  int ClocksThisFrame;
+
+  // Loop through all of the machine clicks that we need to
+  while ((ClocksThisFrame < MasterClocksPerFrame) && mainCPU->myState==CPUState::Running)
+  {
+    int CPUCycles = mainCPU->Execute()*12; // CPU's clock speed is MasterClockSpeed/12
+
+
+    mainPPU->Execute(CPUCycles*3); // PPU's clock is 3x the CPU's
+    ClocksThisFrame+=CPUCycles;
+  }
+
+  if (mainCPU->myState!=CPUState::Running)
+    std::cout<<"CPU Halted"<<std::endl;
 }
 
 bool MainSystem::LoadROM(std::string ROMFile) {
@@ -51,9 +67,15 @@ void MainSystem::Run()
   MainWindow.setFramerateLimit(60);
   MainWindow.setTitle(BuildString.str());
 
+  // Working in milliseconds
+  const double oneframe = 1000/60;
+  sf::Clock FrameTime;
+
   // Reset the CPU, PPU and APU in preparation to start
   std::cout<<"Emulator-Start"<<std::endl;
   mainCPU->Reset();
+  mainPPU->Reset();
+
 
   // This will be the emulator's main loop
   while (MainWindow.isOpen())
@@ -68,6 +90,14 @@ void MainSystem::Run()
         MainWindow.close();
     }
 
+    // Update the emulator once per frame
+    if (FrameTime.getElapsedTime().asMilliseconds() >= oneframe)
+    {
+      Execute();
+      FrameTime.restart();
+    }
+
+    mainPPU->Draw(MainWindow);
     MainWindow.display();
   }
 

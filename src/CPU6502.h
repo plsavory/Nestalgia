@@ -44,7 +44,7 @@ public:
 	void LAX(unsigned char value);
 	void CMP(unsigned char Register, unsigned char Value);
 	unsigned short answer16;
-	void Execute();
+	int Execute();
 	void Reset();
 private:
 	unsigned char b1;
@@ -57,7 +57,7 @@ private:
 	void branch(bool value);
 	void PrintCPUStatus(std::string inst_name);
 	MemoryManager *mainMemory;
-	int CyclesRemain = 0;
+	int CyclesTaken = 0;
 	unsigned char sp;
 	bool pboundarypassed;
 	unsigned char location;

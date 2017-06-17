@@ -24,7 +24,7 @@ struct Cartridge
 class MemoryManager
 {
 public:
-	MemoryManager();
+	MemoryManager(PPU &mPPU);
 	~MemoryManager();
 	int LoadFile(std::string FilePath);
 	unsigned char ReadMemory(unsigned short Location);
@@ -45,8 +45,11 @@ private:
 	void WriteCartridge(unsigned short Location, unsigned char Value);
 	unsigned short WrapMemory(unsigned short Location, unsigned short WrapValue);
 	unsigned char ReadCartridge(unsigned short Location);
+	unsigned char ReadPPU(unsigned short Location);
+	void WritePPU(unsigned short location);
 	int CheckCartridge(Cartridge &cartridge);
 	Cartridge *mainCartridge;
+	PPU *mainPPU;
 	MemoryMapper mapper;
 	// Mapper functions
 	unsigned char ReadNROM(unsigned short Location);
