@@ -8,6 +8,7 @@ MainSystem::MainSystem()
   mainPPU = new PPU();
   mainMemory = new MemoryManager(*mainPPU);
   mainCPU = new CPU6502(*mainMemory);
+  frameRate = new sf::Clock;
 }
 
 MainSystem::~MainSystem()
@@ -16,7 +17,7 @@ MainSystem::~MainSystem()
 }
 
 void MainSystem::Reset() {
-
+  frameRate->restart();
 }
 
 void MainSystem::Execute() {
@@ -70,6 +71,7 @@ void MainSystem::Run()
   // Working in milliseconds
   const double oneframe = 1000/60;
   sf::Clock FrameTime;
+  fps = 0;
 
   // Reset the CPU, PPU and APU in preparation to start
   std::cout<<"Emulator-Start"<<std::endl;
@@ -80,8 +82,17 @@ void MainSystem::Run()
   // This will be the emulator's main loop
   while (MainWindow.isOpen())
   {
+
     // Check window events
     sf::Event event;
+
+    // Update the emulator once per frame
+    if (FrameTime.getElapsedTime().asMilliseconds() >= oneframe)
+    {
+      Execute();
+      FrameTime.restart();
+      fps++;
+    }
 
     while (MainWindow.pollEvent(event))
     {
@@ -90,15 +101,19 @@ void MainSystem::Run()
         MainWindow.close();
     }
 
-    // Update the emulator once per frame
-    if (FrameTime.getElapsedTime().asMilliseconds() >= oneframe)
+    mainPPU->Draw(MainWindow); // Update the display output at the end of the frame
+    MainWindow.display();
+
+    // Set the window title to display the frame rate
+    if (frameRate->getElapsedTime().asMilliseconds() >= 1000)
     {
-      Execute();
-      FrameTime.restart();
+      std::ostringstream windowtitle;
+      windowtitle << BuildString.str() << " FPS: " << fps;
+      MainWindow.setTitle(windowtitle.str());
+      frameRate->restart();
+      fps = 0;
     }
 
-    mainPPU->Draw(MainWindow);
-    MainWindow.display();
   }
 
   Execute();

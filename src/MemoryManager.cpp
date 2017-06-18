@@ -22,7 +22,7 @@ MemoryManager::MemoryManager(PPU &mPPU)
 	mapper = MemoryMapper::Test;
 	mainPPU = &mPPU; // Store a reference to the passed-on PPU object
 
-	for (int i = 0x0; i <= 0xFFFF; i++)
+	for (int i = 0x0; i < 0xFFFF; i++)
 		MainMemory[i] = 0x0;
 
 		pboundarypassed = false;

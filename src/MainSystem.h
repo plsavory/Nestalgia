@@ -18,4 +18,6 @@ private:
   MemoryManager *mainMemory;
   CPU6502 *mainCPU;
   PPU *mainPPU;
+  sf::Clock *frameRate;
+  int fps; // Increment each time the PPU outputs 1 frame
 };
