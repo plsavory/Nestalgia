@@ -10,7 +10,7 @@
 #include "CPU6502.h"
 
 #define LOGCPUTOFILE
-#define PRINTCPUSTATUS
+#define PRINTCPUSTATUS554
 
 CPU6502::CPU6502(MemoryManager &mManager)
 {
@@ -51,6 +51,7 @@ void CPU6502::Reset()
 
 	// Set up CPU logging (if it is enabled)
 	// Set up the std::cout redirect for logging
+
 
 	#ifdef LOGCPUTOFILE
 	std::cout<<"Logging CPU activity to CPULog.log"<<std::endl;
@@ -298,7 +299,7 @@ unsigned char CPU6502::NB()
 {
 	// Get the value of the next byte from Memory
 	//return mainMemory->ReadMemory(pc+(dataoffset++));
-	#ifdef PRINTCPUSTATUS5
+	#ifdef PRINTCPUSTATUS
 	if (currentInst) {
 	std::cout<<" "<<ConvertHex(mainMemory->ReadMemory(pc,1))<<" ";
 	}
