@@ -385,9 +385,9 @@ unsigned char MemoryManager::ReadPPU(unsigned short Location) {
 	unsigned short dbglocation = Location;
 	Location -=0x2000; // There are 8 PPU registers to read/write, so we can easily find out which one here
 
-	std::cout<<"ReadPPU:$"<<dbglocation << ":" << Location << " = "<<(int)mainPPU->Registers[Location]<<std::endl;
+	//std::cout<<"ReadPPU:$"<<dbglocation << ":" << Location << " = "<<(int)mainPPU->Registers[Location]<<std::endl;
 
-	return mainPPU->Registers[Location];
+	return mainPPU->ReadRegister(Location);
 }
 
 void MemoryManager::WritePPU(unsigned short Location, unsigned char Value) {
@@ -396,7 +396,7 @@ void MemoryManager::WritePPU(unsigned short Location, unsigned char Value) {
 	unsigned short dbglocation = Location;
 	Location -=0x2000; // There are 8 PPU registers to read/write, so we can easily find out which one here
 
-	std::cout<<"PPU:$"<<dbglocation;
+	//std::cout<<"PPU:$"<<dbglocation;
 
 	mainPPU->WriteRegister(Location,Value);
 }
