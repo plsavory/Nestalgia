@@ -32,11 +32,24 @@ void MainSystem::Execute() {
   // Loop through all of the machine clicks that we need to
   while ((ClocksThisFrame < MasterClocksPerFrame) && mainCPU->myState==CPUState::Running)
   {
-    int CPUCycles = mainCPU->Execute()*12; // CPU's clock speed is MasterClockSpeed/12
+    int CPUCycles = mainCPU->Execute(); // CPU's clock speed is MasterClockSpeed/12
 
 
     mainPPU->Execute(CPUCycles*3); // PPU's clock is 3x the CPU's
-    ClocksThisFrame+=CPUCycles;
+
+    int machineClocks = CPUCycles*12;
+
+    if (mainCPU->FireNMI == false && mainPPU->NMI_Fired == true ) {
+      // an NMI has been triggered and dealt withm so reset the PPU's request
+      mainPPU->NMI_Fired = false;;
+    }
+    if (mainPPU->NMI_Fired)
+    {
+      // If this is true, the PPU wants to send an NMI to the CPU
+      mainCPU->FireInterrupt(CPUInterrupt::iNMI);
+    }
+
+    ClocksThisFrame+=machineClocks;
   }
 
   if (mainCPU->myState!=CPUState::Running)

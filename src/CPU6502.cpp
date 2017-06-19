@@ -47,6 +47,7 @@ void CPU6502::Reset()
 
 	// Set the interrupt lines all to false
 	FireBRK = false;
+	FireNMI = false;
 
 	// Set up CPU logging (if it is enabled)
 	// Set up the std::cout redirect for logging
@@ -1502,11 +1503,13 @@ void CPU6502::fBRK() {
 
 void CPU6502::FireInterrupt(int type) {
 	// Fire an interrupt to be picked up by the CPU
+	if (type == CPUInterrupt::iNMI)
+		FireNMI = true;
 }
 
 void CPU6502::CheckInterrupts() {
 	// Check for interrupts and react as neccesary
-	if (mainMemory->CheckNMI()) {// NMI has highest priority and cannot be ignored
+	if (FireNMI) {// NMI has highest priority and cannot be ignored
 		HandleInterrupt(CPUInterrupt::iNMI);
 	} else {
 		// Handle everything else
@@ -2317,6 +2320,8 @@ void CPU6502::HandleInterrupt(int type) {
 			PushStack8(pushflags);
 			// Jump to the NMI vector
 			JMP((mainMemory->ReadMemory(0xFFFB) * 256) + mainMemory->ReadMemory(0xFFFA));
+			// Set the NMI Flip-flop back to false
+			FireNMI = false;
 		break;
 		case CPUInterrupt::iIRQ:
 			// Push the program counter

@@ -335,6 +335,11 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location)
 		return MainMemory[Location];
 	}
 
+	if ((Location >= 0x2000) && (Location <= 0x3FFF))
+	{
+		return ReadPPU(Location);
+	}
+
 	if (Location >= 0x4020)
 	{
 		return ReadCartridge(Location);
@@ -376,9 +381,10 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location,bool Silent)
 
 unsigned char MemoryManager::ReadPPU(unsigned short Location) {
 	Location &=0x2007;
+	unsigned short dbglocation = Location;
 	Location -=0x2000; // There are 8 PPU registers to read/write, so we can easily find out which one here
 
-	std::cout<<"Reading PPU Register "<<Location<<std::endl;
+	std::cout<<"ReadPPU:$"<<dbglocation << ":" << Location << " = "<<(int)mainPPU->Registers[Location];
 
 	return mainPPU->Registers[Location];
 }

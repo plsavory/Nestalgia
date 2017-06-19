@@ -50,6 +50,7 @@ public:
 	void FireInterrupt(int type);
 	bool FireBRK;
 	bool FireReset;
+	bool FireNMI;
 private:
 	unsigned char b1;
 	unsigned char FlagRegister;
