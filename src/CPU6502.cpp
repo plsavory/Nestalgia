@@ -45,6 +45,9 @@ void CPU6502::Reset()
 	myState = CPUState::Running;
 	cpucycles = 0;
 
+	// Set the interrupt lines all to false
+	FireBRK = false;
+
 	// Set up CPU logging (if it is enabled)
 	// Set up the std::cout redirect for logging
 
@@ -322,7 +325,8 @@ int CPU6502::Execute()
 		//PrintCPUStatus(InstName(currentInst));
 	#endif
 
-	// Handle interrupts if neccesary (add this later)
+	// Handle interrupts if neccesary
+	CheckInterrupts();
 
 	// Fetch the next opcode
 	unsigned char opcode = NB();
@@ -337,10 +341,7 @@ int CPU6502::Execute()
 	{
 		// BRK instructions
 		case BRK:
-			NB(); // Increment PC by 1 (2 in this case)
-			PushStack16(pc+3); // Push the location of the next instruction to the stack
-			fBRK(); // Push the status register
-			JMP(mainMemory->ReadMemory(0xFFFE));
+			fBRK();
 			CyclesTaken = 7;
 		break;
 		// LD_ZP instructions
@@ -1494,9 +1495,27 @@ void CPU6502::fRTI() {
 
 void CPU6502::fBRK() {
 	// Push the current PC + 2 to the stack, and then JMP to tbe BRK vector ($FFFE)
-	unsigned char pushflags = FlagRegister;
-	pushflags = SetBit(4,1,pushflags);
-	PushStack8(pushflags);
+	NB(); // Fetch garbage byte to increment the PC
+	// Immediately handle BRK interrupt
+	HandleInterrupt(CPUInterrupt::iBRK);
+}
+
+void CPU6502::FireInterrupt(int type) {
+	// Fire an interrupt to be picked up by the CPU
+}
+
+void CPU6502::CheckInterrupts() {
+	// Check for interrupts and react as neccesary
+	if (mainMemory->NMILine) {// NMI has highest priority and cannot be ignored
+		HandleInterrupt(CPUInterrupt::iNMI);
+	} else {
+		// Handle everything else
+		if (GetFlag(Flag::EInterrupt)) { // Only check when this flag is set
+			if (mainMemory->IRQLine) {
+				HandleInterrupt(CPUInterrupt::iIRQ);
+			}
+		} // Don't bother handling reset in this function, will just code this directly later
+	}
 }
 
 void CPU6502::BIT(unsigned char value) {
@@ -2264,4 +2283,60 @@ void CPU6502::PushStack16(unsigned short value) {
 
 unsigned char CPU6502::PopStack() {
 	return mainMemory->ReadMemory(0x100 + (++sp));
+}
+
+void CPU6502::HandleInterrupt(int type) {
+	// Forces the CPU to jump to an interrupt vector. may be called be a CPU instruction or piece of emulated hardware
+
+	/* Vectors:
+	NMI: $FFFA/$FFFB
+	RESET: $FFFC/$FFFD
+	IRQ/BRK: $FFFE/$FFFF
+	*/
+
+	unsigned char pushflags;
+
+	switch (type)
+	{
+		case CPUInterrupt::iReset:
+			// Push the program counter
+			PushStack16(pc);
+			// Push the flag register
+			pushflags = FlagRegister;
+			pushflags = SetBit(4,0,pushflags); // Set bit 4 to 0 if not from a CPU instruction
+			PushStack8(pushflags);
+			// Jump to the RESET vector
+			JMP((mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC));
+		break;
+		case CPUInterrupt::iNMI:
+			// Push the program counter
+			PushStack16(pc);
+			// Push the flag register
+			pushflags = FlagRegister;
+			pushflags = SetBit(4,0,pushflags); // Set bit 4 to 0 if not from a CPU instruction
+			PushStack8(pushflags);
+			// Jump to the NMI vector
+			JMP((mainMemory->ReadMemory(0xFFFB) * 256) + mainMemory->ReadMemory(0xFFFA));
+		break;
+		case CPUInterrupt::iIRQ:
+			// Push the program counter
+			PushStack16(pc);
+			// Push the flag register
+			pushflags = FlagRegister;
+			pushflags = SetBit(4,0,pushflags); // Set bit 4 to 0 if not from a CPU instruction
+			PushStack8(pushflags);
+			// Jump to the BRK/IRQ vector
+			JMP((mainMemory->ReadMemory(0xFFFF) * 256) + mainMemory->ReadMemory(0xFFFE));
+		break;
+		case CPUInterrupt::iBRK:
+			// Push the program counter
+			PushStack16(pc);
+			// Push the flag register
+			pushflags = FlagRegister;
+			pushflags = SetBit(4,1,pushflags);
+			PushStack8(pushflags);
+			// Jump to the BRK/IRQ vector
+			JMP((mainMemory->ReadMemory(0xFFFF) * 256) + mainMemory->ReadMemory(0xFFFE));
+		break;
+	}
 }

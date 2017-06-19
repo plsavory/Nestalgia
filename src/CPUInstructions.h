@@ -302,7 +302,7 @@
 #define RRA_ABX 0x7F
 #define RRA_ABY 0x7B
 #define RRA_INX 0x63
-#define RRA_INY 0x73 
+#define RRA_INY 0x73
 
 // SBC
 #define SBC_IMM1 0xEB
@@ -322,4 +322,5 @@ namespace M6502
 	};
 
 	enum CPUState {Running,Halt,Interrupt,Stopped,Error,WaitForInterrupt};
+	enum CPUInterrupt {iNMI,iReset,iIRQ,iBRK};
 }

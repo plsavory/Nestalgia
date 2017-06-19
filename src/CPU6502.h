@@ -46,6 +46,10 @@ public:
 	unsigned short answer16;
 	int Execute();
 	void Reset();
+	void HandleInterrupt(int type); // Forces the CPU to jump to an interrupt vector. may be called be a CPU instruction or piece of emulated hardware
+	void FireInterrupt(int type);
+	bool FireBRK;
+	bool FireReset;
 private:
 	unsigned char b1;
 	unsigned char FlagRegister;
@@ -77,4 +81,5 @@ private:
 	std::string ConvertHex(int value);
 	std::ofstream * redirectfile;
 	unsigned char currentInst;
+	void CheckInterrupts();
 };

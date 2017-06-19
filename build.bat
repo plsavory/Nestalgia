@@ -1,1 +1,1 @@
-g++ -std=c++11 -I SFML\include src\CPU6502.cpp src\MemoryManager.cpp src\MemoryMappers.cpp src\MainSystem.cpp src\EntryPoint.cpp src\PPU.cpp -L SFML\lib -lsfml-graphics -lsfml-window -lsfml-system -o build\NESEmulator.exe -O2 -D_hypot=hypot
+g++ -std=c++11 -I SFML\include src\CPU6502.cpp src\MemoryManager.cpp src\MemoryMappers.cpp src\MainSystem.cpp src\EntryPoint.cpp src\PPU.cpp -L SFML\lib -lsfml-graphics -lsfml-window -lsfml-system -o build\NESEmulator.exe -O3 -D_hypot=hypot

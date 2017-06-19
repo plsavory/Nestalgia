@@ -27,6 +27,9 @@ MemoryManager::MemoryManager(PPU &mPPU)
 
 		pboundarypassed = false;
 
+		// Interrupt lines connected to CPU
+		NMILine = false;
+		IRQLine = false;
 }
 
 
