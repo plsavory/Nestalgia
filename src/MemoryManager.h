@@ -40,8 +40,8 @@ public:
 	void PrintDebugInfo();
 		bool pboundarypassed; // Holds true if the previous indirect memory operation passed a page boundary, reset otherwise.
 	// Allow hardware connected to the MemoryManager to set these.
-	bool IRQLine;
-	bool NMILine;
+	bool CheckIRQ();
+	bool CheckNMI();
 private:
 	unsigned char MainMemory[0xFFFF];
 	void WriteRAM(unsigned short Location, unsigned char Value);
@@ -49,13 +49,15 @@ private:
 	unsigned short WrapMemory(unsigned short Location, unsigned short WrapValue);
 	unsigned char ReadCartridge(unsigned short Location);
 	unsigned char ReadPPU(unsigned short Location);
-	void WritePPU(unsigned short location);
+	void WritePPU(unsigned short location,unsigned char value);
 	int CheckCartridge(Cartridge &cartridge);
 	Cartridge *mainCartridge;
 	PPU *mainPPU;
 	MemoryMapper mapper;
 	// Mapper functions
 	unsigned char ReadNROM(unsigned short Location);
+	bool IRQLine;
+	bool NMILine;
 };
 
 /*

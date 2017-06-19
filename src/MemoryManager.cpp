@@ -32,6 +32,12 @@ MemoryManager::MemoryManager(PPU &mPPU)
 		IRQLine = false;
 }
 
+bool MemoryManager::CheckIRQ() {
+	return IRQLine;
+}
+bool MemoryManager::CheckNMI() {
+	return NMILine;
+}
 
 MemoryManager::~MemoryManager()
 {
@@ -240,6 +246,11 @@ void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 	else
 		std::cout<<"      WRITE     $"<<std::hex<<Location<<" = $"<<(int)Value<<std::endl;
 	#endif
+
+	if ((Location >= 0x2000) && (Location <= 0x3FFF))
+	{
+		WritePPU(Location,Value);
+	}
 	if (Location >= 0x4020)
 		WriteCartridge(Location,Value);
 
@@ -366,7 +377,21 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location,bool Silent)
 unsigned char MemoryManager::ReadPPU(unsigned short Location) {
 	Location &=0x2007;
 	Location -=0x2000; // There are 8 PPU registers to read/write, so we can easily find out which one here
+
+	std::cout<<"Reading PPU Register "<<Location<<std::endl;
+
 	return mainPPU->Registers[Location];
+}
+
+void MemoryManager::WritePPU(unsigned short Location, unsigned char Value) {
+	// Writes to the PPU's registers
+	Location &=0x2007;
+	unsigned short dbglocation = Location;
+	Location -=0x2000; // There are 8 PPU registers to read/write, so we can easily find out which one here
+
+	std::cout<<"PPU:$"<<dbglocation;
+
+	mainPPU->WriteRegister(Location,Value);
 }
 
 // These need access to the current MemoryManager state, so delare them as class functions

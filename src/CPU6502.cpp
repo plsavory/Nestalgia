@@ -9,17 +9,17 @@
 #include "MemoryManager.h"
 #include "CPU6502.h"
 
-#define LOGCPUTOFILE3
-#define PRINTCPUSTATUS3
+#define LOGCPUTOFILE
+#define PRINTCPUSTATUS
 
 CPU6502::CPU6502(MemoryManager &mManager)
 {
-	myState = CPUState::Running;
+	myState = CPUState::Halt;
 	mainMemory = &mManager;
 	FlagRegister = 0x24; // Initialize the flags register
 	rA, rX, rY = 0x0;
 	pc = 0x0;
-	myState = CPUState::Running;
+	myState = CPUState::Halt;
 	cpucycles = 0;
 }
 
@@ -38,7 +38,7 @@ void CPU6502::Reset()
 	rY = 0x0;
 	rA = 0x0;
 	pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
-	//pc = 0xC000; - For nestest.nes automatic tests
+	//pc = 0xC000; //- For nestest.nes automatic tests
 	sp = 0xFD; // Set the stack pointer
 	SetFlag(Flag::Unused,1);
 	SetFlag(Flag::EInterrupt,1);
@@ -1506,12 +1506,12 @@ void CPU6502::FireInterrupt(int type) {
 
 void CPU6502::CheckInterrupts() {
 	// Check for interrupts and react as neccesary
-	if (mainMemory->NMILine) {// NMI has highest priority and cannot be ignored
+	if (mainMemory->CheckNMI()) {// NMI has highest priority and cannot be ignored
 		HandleInterrupt(CPUInterrupt::iNMI);
 	} else {
 		// Handle everything else
 		if (GetFlag(Flag::EInterrupt)) { // Only check when this flag is set
-			if (mainMemory->IRQLine) {
+			if (mainMemory->CheckIRQ()) {
 				HandleInterrupt(CPUInterrupt::iIRQ);
 			}
 		} // Don't bother handling reset in this function, will just code this directly later
