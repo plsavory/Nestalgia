@@ -99,19 +99,21 @@ void MainSystem::Run()
     // Check window events
     sf::Event event;
 
+    while (MainWindow.pollEvent(event))
+    {
+      // Close the window when the close button is clocked
+      if (event.type == sf::Event::Closed) {
+        mainCPU->myState = CPUState::Halt;
+        MainWindow.close();
+      }
+    }
+
     // Update the emulator once per frame
     if (FrameTime.getElapsedTime().asMilliseconds() >= oneframe)
     {
       Execute();
       FrameTime.restart();
       fps++;
-    }
-
-    while (MainWindow.pollEvent(event))
-    {
-      // Close the window when the close button is clocked
-      if (event.type == sf::Event::Closed)
-        MainWindow.close();
     }
 
     mainPPU->Draw(MainWindow); // Update the display output at the end of the frame
@@ -127,7 +129,6 @@ void MainSystem::Run()
       fps = 0;
     }
 
-  }
-
-  Execute();
+}
+  //Execute();
 }

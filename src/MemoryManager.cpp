@@ -129,6 +129,12 @@ int MemoryManager::LoadFile(std::string FilePath)
 		}
 
 		// Load the CHR_ROM into the correct location
+		int CHROffset = 0;
+		while (CHROffset<mainCartridge->CHRRomSize) {
+			mainCartridge->cROM[CHROffset] = tempStorage[PRGOffset+(FileOffset+CHROffset)];
+			//std::cout<<"CHR: "<<std::dec<<CHROffset<<" = "<<std::hex<< mainCartridge->cROM[CHROffset]<<std::endl;
+			CHROffset++;
+		}
 	}
 
 	std::cout<<"ROM File loaded successfully."<<std::endl;
