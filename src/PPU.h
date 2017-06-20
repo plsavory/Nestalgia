@@ -17,7 +17,7 @@ struct Nametable {
 class PPU {
 
 public:
-  PPU(Cartridge &cart);
+  PPU();
   void Reset();
   void Execute(float PPUClock);
   void Draw(sf::RenderWindow &mWindow);
@@ -28,10 +28,12 @@ public:
   void WriteRegister(unsigned short Register,unsigned char value);
   unsigned char ReadRegister(unsigned short Location);
   bool NMI_Fired;
+  void WriteCROM(unsigned short Location,unsigned char Value);
+  unsigned char ReadCROM(unsigned short Location);
 private:
   int PPUClocks;
   int TileCounter;
-  int CurrentPixel;
+  int CurrentCycle;
   int CurrentTile;
   int CurrentScanline;
   void RenderNametable(int Nametable, int OffsetX, int OffsetY);
@@ -59,9 +61,10 @@ private:
   void DisplayNametableID(unsigned char ID,int Pixel,int Scanline);
   void RenderTilePixel(unsigned char ID, int Pixel, int Scanline);
   unsigned char ReadPatternTable(unsigned short Location);
-  Cartridge *mainCartridge;
+  void DrawBitmapPixel(int pixeldata,int Pixel,int Scanline);
   int PixelOffset;
   unsigned char nametablebyte;
-  int OldTileX;
-  int OldTileY;
+  unsigned char bitmapLo;
+  unsigned char bitmapHi;
+  unsigned char cROM[0x80000]; // 512KiB max - PPU has its own memory for CHR data, this will be copied over from the MemoryManager's cartridge upon ROM load
 };

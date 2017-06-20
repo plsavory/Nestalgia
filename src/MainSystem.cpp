@@ -6,7 +6,7 @@
 
 MainSystem::MainSystem()
 {
-  mainPPU = new PPU(*mainMemory->mainCartridge);
+  mainPPU = new PPU();
   mainMemory = new MemoryManager(*mainPPU);
   mainCPU = new CPU6502(*mainMemory);
   frameRate = new sf::Clock;

@@ -133,6 +133,7 @@ int MemoryManager::LoadFile(std::string FilePath)
 		int CHROffset = 0;
 		while (CHROffset<mainCartridge->CHRRomSize) {
 			mainCartridge->cROM[CHROffset] = tempStorage[PRGOffset+(FileOffset+CHROffset)];
+			mainPPU->WriteCROM(CHROffset,mainCartridge->cROM[CHROffset]); // Copy the values into the PPU's character memory
 			//std::cout<<"CHR: "<<std::dec<<CHROffset<<" = "<<std::hex<< mainCartridge->cROM[CHROffset]<<std::endl;
 			CHROffset++;
 		}

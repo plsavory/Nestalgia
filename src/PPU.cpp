@@ -8,8 +8,7 @@
 #define PPULOGNEWLINE66
 #define DATABUSLOGGING
 
-PPU::PPU(Cartridge &cart) {
-  mainCartridge = &cart;
+PPU::PPU() {
   pixels = new sf::Uint8[256*240*4];
   NESPixels = new unsigned char[256*262]; // The NES PPU's internal render memory
   displayImage = new sf::Image();
@@ -46,7 +45,7 @@ unsigned char PPU::SetBit(int bit, bool val, unsigned char value) // Used for se
 
 void PPU::Reset() {
   // Set the initial state of the PPU
-  CurrentPixel = 0;
+  CurrentCycle = 0;
   CurrentScanline = 0;
   CurrentTile = 0;
   NMI_Fired = false; // If this is true, a NMI will be fired to the CPU
@@ -89,24 +88,32 @@ void PPU::Execute(float PPUClock) {
     RenderNametable(1,0,0);
 
     // Render to the internal pixel buffer only if we're on a visible pixel (1 to 256 & scanlines 0 to 240)
-    if (CurrentScanline == -1 && CurrentPixel == 1)
+    if (CurrentScanline == -1 && CurrentCycle == 1)
     {
           // Reset VBLANK flag
           Registers[2] = SetBit(7,0,Registers[2]);
     }
 
-    if (CurrentPixel >= 1 && CurrentPixel <= 256 && CurrentScanline <= 240) {
-      DrawPixel(0x0,CurrentScanline,CurrentPixel); // For now just render a solid colour
-
-
       // Get the nametable byte for this tile
-      if (PixelOffset == 0)
-        nametablebyte = ReadNametableByte(CurrentPixel,CurrentScanline);
+      //if (PixelOffset == 0)
+      int Pixel = CurrentCycle-1; // Account for the non-drawing cycle
+
+      if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240) {
+        DrawPixel(0x0,CurrentScanline,Pixel); // For now just render a solid colour
+
+      if ((Pixel & 7) == 0)
+        nametablebyte = ReadNametableByte(Pixel,CurrentScanline);
 
       if (nametablebyte != 0x0)
-        DrawPixelTest(0x33,CurrentScanline,CurrentPixel,nametablebyte);
+        DrawPixelTest(0x33,CurrentScanline,Pixel,nametablebyte);
 
-          PixelOffset++; // The pixel offset of the current tile
+      // Next need to draw the actual pixel bitmap
+
+      // Bit shift the bitmap for the next pixel
+      bitmapLo = (bitmapLo<<1);
+      bitmapHi = (bitmapHi<<1);
+
+      PixelOffset++; // The pixel offset of the current tile
 
       // Reset the pixel counter if it goes above 7 as we'll need to fetch the next tile soon
       if (PixelOffset > 7)
@@ -114,13 +121,13 @@ void PPU::Execute(float PPUClock) {
     }
 
     // Handle switching to the next scanline here
-    if (CurrentPixel == 341) {
-      CurrentPixel = 0;
+    if (CurrentCycle == 341) {
+      CurrentCycle = 0;
       CurrentScanline++;
     }
 
     // VBLANK time - Set the VBLANK flag to true and fire an NMI to the CPU (if this functionality is enabled)
-    if (CurrentScanline == 241 && CurrentPixel == 1)
+    if (CurrentScanline == 241 && CurrentCycle == 1)
     {
       // Fire VBLANK NMI if NMI_Enable is true
       // Set PPU's VBLANK flag
@@ -138,16 +145,19 @@ void PPU::Execute(float PPUClock) {
     // If we're on the last scanline, reset the counters to 0 for the next frame.
     if (CurrentScanline >= 260) {
       CurrentScanline = -1;
-      CurrentPixel = 0;
+      CurrentCycle = 0;
       PixelOffset = 0;
     } else {
     PPUClocks++;
-    CurrentPixel++;
+    CurrentCycle++;
   }
 
   }
 
   PPUClocks = 0;
+}
+
+void PPU::DrawBitmapPixel(int pixeldata,int Pixel,int Scanline) {
 }
 
 void PPU::DrawPixel(unsigned char value, int Scanline, int Pixel) {
@@ -221,17 +231,41 @@ unsigned char PPU::NB() {
 
 unsigned char PPU::ReadNametableByte(int Pixel, int Scanline) {
   // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
-  int TileX = (Pixel/8);
-  int TileY = (Scanline/8)*32;
+  // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
+	// Should be called once per tile (so 33 times per scanline) or every 8 pixels
+	int TileX = (Pixel / 8);
+	int TileY = (Scanline / 8) * 32;
+	int CurrentpxLine;
 
-  return Nametables[0].Data[TileX + TileY];
+	if (Scanline > 7)
+		//CurrentpxLine = (((Scanline/8) - 1) * 8) - Scanline;
+    CurrentpxLine = Scanline & 7;
+	else
+		CurrentpxLine = Scanline;
+
+/*
+  if (Scanline >= 0 && Scanline <= 256) {
+   std::cout<<"Current Scanline:"<<std::dec<<(int)Scanline<< " ";
+	 std::cout<<"Current Line of tile: " <<std::dec<< (int)CurrentpxLine << std::endl;
+ }
+ */
+	// Get the ID of the bitmap data for target nametable entry
+	unsigned char data = Nametables[0].Data[TileX + TileY];
+
+	// Fill the bitmap shift registers with the CHR data for this tile
+	//unsigned short bitmapLo = PPU::ReadPatternTable(data+CurrentLine);
+	//unsigned short bitmapHi = PPU::ReadPatternTable(8+data+CurrentLine);
+	bitmapLo = ReadPatternTable(data+CurrentpxLine);
+	bitmapHi = ReadPatternTable(8 + data+CurrentpxLine);
+
+	return data;
 }
 
 void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
       // This assumes that the "Pixel" number is bit shifted with each line
       // Fetch a pixel of character data from CHR and render it
-      unsigned short Lo = PPU::ReadPatternTable(ID)<<CurrentPixel;
-      unsigned short Hi = PPU::ReadPatternTable(8+ID)<<CurrentPixel;
+      unsigned short Lo = PPU::ReadPatternTable(ID)<<CurrentCycle;
+      unsigned short Hi = PPU::ReadPatternTable(8+ID)<<CurrentCycle;
 
       // Draw a pixel on screen of temporary colour for now
       int PixelColour = GetBit(7,Lo);
@@ -240,8 +274,17 @@ void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
 }
 
 unsigned char PPU::ReadPatternTable(unsigned short Location) {
-  if (mainCartridge->Mapper == 0)
-    return mainCartridge->cROM[Location];
+  // Add more logic to this later for handling mappers
+  return cROM[Location];
+}
+
+void PPU::WriteCROM(unsigned short Location,unsigned char Value) {
+  // Will need to add more logic to these later for mappers
+  cROM[Location] = Value;
+}
+unsigned char PPU::ReadCROM(unsigned short Location) {
+  // Will need to add more logic to these later for mappers
+  return cROM[Location];
 }
 
 void PPU::DisplayNametableID(unsigned char ID,int Pixel,int Scanline) {
