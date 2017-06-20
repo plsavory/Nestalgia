@@ -30,6 +30,7 @@ public:
   bool NMI_Fired;
   void WriteCROM(unsigned short Location,unsigned char Value);
   unsigned char ReadCROM(unsigned short Location);
+  bool CHRRAM;
 private:
   int PPUClocks;
   int TileCounter;
@@ -61,7 +62,7 @@ private:
   void DisplayNametableID(unsigned char ID,int Pixel,int Scanline);
   void RenderTilePixel(unsigned char ID, int Pixel, int Scanline);
   unsigned char ReadPatternTable(unsigned short Location);
-  void DrawBitmapPixel(int pixeldata,int Pixel,int Scanline);
+  void DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline);
   int PixelOffset;
   unsigned char nametablebyte;
   unsigned char bitmapLo;

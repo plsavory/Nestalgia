@@ -51,6 +51,7 @@ public:
 	bool FireBRK;
 	bool FireReset;
 	bool FireNMI;
+	bool InterruptProcessed;
 private:
 	unsigned char b1;
 	unsigned char FlagRegister;

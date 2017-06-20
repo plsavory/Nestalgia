@@ -10,8 +10,8 @@
 #include "MemoryManager.h"
 #include "CPU6502.h"
 
-#define LOGCPUTOFILE555
-#define PRINTCPUSTATUS557
+#define LOGCPUTOFILE56
+#define PRINTCPUSTATUS56
 
 CPU6502::CPU6502(MemoryManager &mManager)
 {
@@ -22,6 +22,7 @@ CPU6502::CPU6502(MemoryManager &mManager)
 	pc = 0x0;
 	myState = CPUState::Halt;
 	cpucycles = 0;
+	InterruptProcessed = false;
 }
 
 
@@ -52,7 +53,7 @@ void CPU6502::Reset()
 
 	// Set up CPU logging (if it is enabled)
 	// Set up the std::cout redirect for logging
-
+InterruptProcessed = false;
 
 	#ifdef LOGCPUTOFILE
 	std::cout<<"Logging CPU activity to CPULog.log"<<std::endl;
@@ -1513,6 +1514,7 @@ void CPU6502::CheckInterrupts() {
 	// Check for interrupts and react as neccesary
 	if (FireNMI) {// NMI has highest priority and cannot be ignored
 		HandleInterrupt(CPUInterrupt::iNMI);
+		//std::cout<<"CPU:VBLANK Interrupt"<<std::endl;
 	} else {
 		// Handle everything else
 		if (GetFlag(Flag::EInterrupt)) { // Only check when this flag is set
@@ -2300,7 +2302,7 @@ void CPU6502::HandleInterrupt(int type) {
 	*/
 
 	unsigned char pushflags;
-
+	unsigned short TargetAddress;
 	switch (type)
 	{
 		case CPUInterrupt::iReset:
@@ -2321,8 +2323,13 @@ void CPU6502::HandleInterrupt(int type) {
 			pushflags = SetBit(4,0,pushflags); // Set bit 4 to 0 if not from a CPU instruction
 			PushStack8(pushflags);
 			// Jump to the NMI vector
-			JMP((mainMemory->ReadMemory(0xFFFB) * 256) + mainMemory->ReadMemory(0xFFFA));
+			TargetAddress = (mainMemory->ReadMemory(0xFFFB) * 256) + mainMemory->ReadMemory(0xFFFA);
+			//JMP((mainMemory->ReadMemory(0xFFFB) * 256) + mainMemory->ReadMemory(0xFFFA));
+			pc = TargetAddress;
 			// Set the NMI Flip-flop back to false
+			#ifdef PRINTCPUSTATUS
+			std::cout<<"INTERRUPT_NMI"<<std::endl;
+			#endif
 			FireNMI = false;
 		break;
 		case CPUInterrupt::iIRQ:
@@ -2346,4 +2353,6 @@ void CPU6502::HandleInterrupt(int type) {
 			JMP((mainMemory->ReadMemory(0xFFFF) * 256) + mainMemory->ReadMemory(0xFFFE));
 		break;
 	}
+
+	InterruptProcessed = true;
 }

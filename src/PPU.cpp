@@ -5,8 +5,8 @@
 #include <iostream>
 
 #define PPULogging55
-#define PPULOGNEWLINE66
-#define DATABUSLOGGING
+#define PPULOGNEWLINE55
+#define DATABUSLOGGING66
 
 PPU::PPU() {
   pixels = new sf::Uint8[256*240*4];
@@ -62,7 +62,7 @@ void PPU::Reset() {
   }
 
   for (int i = 0; i <= (256*262); i++)
-    NESPixels[i] = 0x15;
+    NESPixels[i] = 0x0;
 
   // Zero-out the PPU's memory
   //for (int i = 0; i < 0x3FFF;i++)
@@ -85,7 +85,6 @@ void PPU::Execute(float PPUClock) {
 
     // Every new scanline, we should fetch the appropriate data from the nametable for this scanline.
     // RenderNametable() function will handle the rest
-    RenderNametable(1,0,0);
 
     // Render to the internal pixel buffer only if we're on a visible pixel (1 to 256 & scanlines 0 to 240)
     if (CurrentScanline == -1 && CurrentCycle == 1)
@@ -99,15 +98,22 @@ void PPU::Execute(float PPUClock) {
       int Pixel = CurrentCycle-1; // Account for the non-drawing cycle
 
       if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240) {
-        DrawPixel(0x0,CurrentScanline,Pixel); // For now just render a solid colour
 
-      if ((Pixel & 7) == 0)
+      if ((Pixel & 7) == 0) {
         nametablebyte = ReadNametableByte(Pixel,CurrentScanline);
 
-      if (nametablebyte != 0x0)
-        DrawPixelTest(0x33,CurrentScanline,Pixel,nametablebyte);
+      }
+
+      //if (CurrentScanline > 100)
+      //std::cout<<"PixelTick"<<std::endl;
+    //  if (nametablebyte != 0x0)
+        //DrawPixelTest(0x33,CurrentScanline,Pixel,nametablebyte);
 
       // Next need to draw the actual pixel bitmap
+      bool lo = GetBit(7,bitmapLo);
+      bool hi = GetBit(7,bitmapHi);
+
+      DrawBitmapPixel(lo,hi,Pixel,CurrentScanline);
 
       // Bit shift the bitmap for the next pixel
       bitmapLo = (bitmapLo<<1);
@@ -134,7 +140,11 @@ void PPU::Execute(float PPUClock) {
       Registers[2] = SetBit(7,1,Registers[2]);
 
       if (GetBit(7,Registers[0]))
+      {
         NMI_Fired = true;
+        //std::cout<<"PPU: Fired NMI"<<std::endl;
+      }
+
 
       #ifdef PPULogging
         std::cout<<"VBLANK_BEGIN"<<std::endl;
@@ -157,7 +167,26 @@ void PPU::Execute(float PPUClock) {
   PPUClocks = 0;
 }
 
-void PPU::DrawBitmapPixel(int pixeldata,int Pixel,int Scanline) {
+void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline) {
+  int pixelvalue = (lo + (hi << 1));
+  unsigned char col = 0x5;
+  switch (pixelvalue)
+  {
+    case 0:
+      col = 0x3E;
+    break;
+      case 1:
+      col = 0x24;
+    break;
+    case 2:
+      col = 0x1B;
+    break;
+    case 3:
+      col = 0x1;
+    break;
+  }
+
+  DrawPixel(col,Scanline,Pixel);
 }
 
 void PPU::DrawPixel(unsigned char value, int Scanline, int Pixel) {
@@ -214,11 +243,15 @@ void PPU::PPUDWrite(unsigned char value) {
 
 void PPU::WriteMemory(unsigned short Location, unsigned char value) {
   // Write a value to the PPU's memory
+
   #ifdef DATABUSLOGGING
     std::cout<<"PPU_DATA_WRITE $"<<std::hex<<(int)Location<<" = $"<<(int)value<<std::endl;
   #endif
 
   // Direct the data to the appropriate part of the PPU's memory...
+  if (CHRRAM && Location <= 0x1FFF)
+    cROM[Location] = value;
+
   if (Location >= 0x2000 && Location <= 0x2FFF)
     WriteNametable(Location,value); // Write to the appropriate nametable
 }
@@ -252,11 +285,11 @@ unsigned char PPU::ReadNametableByte(int Pixel, int Scanline) {
 	// Get the ID of the bitmap data for target nametable entry
 	unsigned char data = Nametables[0].Data[TileX + TileY];
 
+  int PatternToRead = (data)*16;
+
 	// Fill the bitmap shift registers with the CHR data for this tile
-	//unsigned short bitmapLo = PPU::ReadPatternTable(data+CurrentLine);
-	//unsigned short bitmapHi = PPU::ReadPatternTable(8+data+CurrentLine);
-	bitmapLo = ReadPatternTable(data+CurrentpxLine);
-	bitmapHi = ReadPatternTable(8 + data+CurrentpxLine);
+	bitmapLo = ReadPatternTable(PatternToRead+CurrentpxLine);
+	bitmapHi = ReadPatternTable(8+PatternToRead+CurrentpxLine);
 
 	return data;
 }
@@ -275,7 +308,8 @@ void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
 
 unsigned char PPU::ReadPatternTable(unsigned short Location) {
   // Add more logic to this later for handling mappers
-  return cROM[Location];
+  unsigned short offset = GetBit(4,Registers[0])*0x1000;
+  return cROM[offset+Location];
 }
 
 void PPU::WriteCROM(unsigned short Location,unsigned char Value) {
@@ -358,6 +392,9 @@ void PPU::WriteNametable(unsigned short Location,unsigned char Value) {
 void PPU::WriteRegister(unsigned short Register,unsigned char value) {
   switch (Register)
   {
+    case 2:
+      // Register 2 is read only
+    break;
     case 6:
     SelectAddress(value); // PPU is writing to PPUDATA, so handle address selecting
     break;
@@ -370,7 +407,7 @@ void PPU::WriteRegister(unsigned short Register,unsigned char value) {
   }
 
   #ifdef PPULogging
-
+  if (Register == 0) {
   int value1 = (int)value;
   std::cout<<std::hex<<" ";
   switch (Register)
@@ -400,9 +437,13 @@ void PPU::WriteRegister(unsigned short Register,unsigned char value) {
       std::cout<<"OAMDMA = $"<<value1;
     break;
   }
+
+  std::cout<<std::endl;
+}
   #endif
 
   #ifdef PPULOGNEWLINE
+  if (Register == 0)
   std::cout<<" "<<std::endl;
   #endif
 

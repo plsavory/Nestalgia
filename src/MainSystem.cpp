@@ -33,6 +33,9 @@ void MainSystem::Execute() {
   // Loop through all of the machine clicks that we need to
   while ((ClocksThisFrame < MasterClocksPerFrame) && mainCPU->myState==CPUState::Running)
   {
+
+
+
     int CPUCycles = mainCPU->Execute(); // CPU's clock speed is MasterClockSpeed/12
 
 
@@ -40,21 +43,26 @@ void MainSystem::Execute() {
 
     int machineClocks = CPUCycles*12;
 
-    if (mainCPU->FireNMI == false && mainPPU->NMI_Fired == true ) {
-      // an NMI has been triggered and dealt withm so reset the PPU's request
-      mainPPU->NMI_Fired = false;;
-    }
-    if (mainPPU->NMI_Fired)
+    if (mainPPU->NMI_Fired == true)
     {
       // If this is true, the PPU wants to send an NMI to the CPU
       mainCPU->FireInterrupt(CPUInterrupt::iNMI);
+      //std::cout<<"PPU: "<<(mainPPU->NMI_Fired == true)<<std::endl;
+      //std::cout<<"VBLANK_NMI Fired"<<std::endl;
     }
 
+    if (mainCPU->InterruptProcessed == true && mainPPU->NMI_Fired == true ) {
+      // an NMI has been triggered and dealt withm so reset the PPU's request
+      mainPPU->NMI_Fired = false;
+      mainCPU->InterruptProcessed = false;
+    }
+
+
     ClocksThisFrame+=machineClocks;
+
   }
 
-  if (mainCPU->myState!=CPUState::Running)
-    std::cout<<"CPU Halted"<<std::endl;
+
 }
 
 bool MainSystem::LoadROM(std::string ROMFile) {
@@ -83,7 +91,7 @@ void MainSystem::Run()
   MainWindow.setTitle(BuildString.str());
 
   // Working in milliseconds
-  const double oneframe = 1000/60;
+  const double oneframe = 1000/60; // Will need to work on the timing when emulator is more complete. for some reason frame rate is showing 30fps unless I put 120 here.
   sf::Clock FrameTime;
   fps = 0;
 
@@ -112,9 +120,9 @@ void MainSystem::Run()
     // Update the emulator once per frame
     if (FrameTime.getElapsedTime().asMilliseconds() >= oneframe)
     {
+      fps++;
       Execute();
       FrameTime.restart();
-      fps++;
     }
 
     mainPPU->Draw(MainWindow); // Update the display output at the end of the frame

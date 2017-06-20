@@ -119,7 +119,7 @@ int MemoryManager::LoadFile(std::string FilePath)
 		// Trainers are currently ignored - will need to add support for them when the program is more functional.
 
 		// Load the PRG_ROM into the correct location
-		int FileOffset = 16+(512*mainCartridge->TrainerPresent);
+		const int FileOffset = 16+(512*mainCartridge->TrainerPresent);
 		int PRGOffset = 0;
 
 		while (PRGOffset<mainCartridge->PRGRomSize)
@@ -130,11 +130,14 @@ int MemoryManager::LoadFile(std::string FilePath)
 		}
 
 		// Load the CHR_ROM into the correct location
+		const int CHRFileOffset = FileOffset + (mainCartridge->PRGRomSize);
+
 		int CHROffset = 0;
+
 		while (CHROffset<mainCartridge->CHRRomSize) {
-			mainCartridge->cROM[CHROffset] = tempStorage[PRGOffset+(FileOffset+CHROffset)];
+			mainCartridge->cROM[CHROffset] = tempStorage[(CHRFileOffset+CHROffset)];
 			mainPPU->WriteCROM(CHROffset,mainCartridge->cROM[CHROffset]); // Copy the values into the PPU's character memory
-			//std::cout<<"CHR: "<<std::dec<<CHROffset<<" = "<<std::hex<< mainCartridge->cROM[CHROffset]<<std::endl;
+
 			CHROffset++;
 		}
 	}
@@ -183,8 +186,12 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 			cartridge.CHRRomSize = (8192*cartridge.Header[5]);
 			std::cout<<"CHR_ROM Size: "<<std::dec<<(int)cartridge.CHRRomSize<<"bytes"<<std::endl;
 
-			if (cartridge.Header[5] == 0)
+			if (cartridge.Header[5] == 0) {
+				mainPPU->CHRRAM = true;
 				std::cout<<"Cartridge uses CHR_RAM"<<std::endl;
+			} else {
+				mainPPU->CHRRAM = false;
+			}
 
 			// Get the size of the PRG_RAM
 			cartridge.PRGRamSize = (8192*cartridge.Header[8]);
