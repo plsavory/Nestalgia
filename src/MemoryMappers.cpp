@@ -2,6 +2,7 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
+#include "Cartridge.h"
 #include "PPU.h"
 #include "MemoryManager.h"
 

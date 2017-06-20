@@ -3,6 +3,7 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
+#include "Cartridge.h"
 #include "PPU.h"
 #include "MemoryManager.h"
 #include <fstream>
@@ -180,6 +181,9 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 			// Get the size of the CHRRom
 			cartridge.CHRRomSize = (8192*cartridge.Header[5]);
 			std::cout<<"CHR_ROM Size: "<<std::dec<<(int)cartridge.CHRRomSize<<"bytes"<<std::endl;
+
+			if (cartridge.Header[5] == 0)
+				std::cout<<"Cartridge uses CHR_RAM"<<std::endl;
 
 			// Get the size of the PRG_RAM
 			cartridge.PRGRamSize = (8192*cartridge.Header[8]);

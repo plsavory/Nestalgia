@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 #include <SFML/Window.hpp>
+#include "Cartridge.h"
 #include "ProjectInfo.h"
 #include "MainSystem.h"
 

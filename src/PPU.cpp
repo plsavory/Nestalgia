@@ -1,13 +1,15 @@
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
+#include "Cartridge.h"
 #include "PPU.h"
 #include <iostream>
 
 #define PPULogging55
 #define PPULOGNEWLINE66
-#define DATABUSLOGGING56
+#define DATABUSLOGGING
 
-PPU::PPU() {
+PPU::PPU(Cartridge &cart) {
+  mainCartridge = &cart;
   pixels = new sf::Uint8[256*240*4];
   NESPixels = new unsigned char[256*262]; // The NES PPU's internal render memory
   displayImage = new sf::Image();
@@ -93,14 +95,22 @@ void PPU::Execute(float PPUClock) {
           Registers[2] = SetBit(7,0,Registers[2]);
     }
 
-    if (CurrentPixel >= 0 && CurrentPixel <= 256 && CurrentScanline <= 240) {
+    if (CurrentPixel >= 1 && CurrentPixel <= 256 && CurrentScanline <= 240) {
       DrawPixel(0x0,CurrentScanline,CurrentPixel); // For now just render a solid colour
 
-      // Get the nametable byte for this pixel
-      unsigned char nametablebyte = ReadNametableByte(CurrentPixel,CurrentScanline);
+
+      // Get the nametable byte for this tile
+      if (PixelOffset == 0)
+        nametablebyte = ReadNametableByte(CurrentPixel,CurrentScanline);
 
       if (nametablebyte != 0x0)
         DrawPixelTest(0x33,CurrentScanline,CurrentPixel,nametablebyte);
+
+          PixelOffset++; // The pixel offset of the current tile
+
+      // Reset the pixel counter if it goes above 7 as we'll need to fetch the next tile soon
+      if (PixelOffset > 7)
+        PixelOffset = 0;
     }
 
     // Handle switching to the next scanline here
@@ -129,6 +139,7 @@ void PPU::Execute(float PPUClock) {
     if (CurrentScanline >= 260) {
       CurrentScanline = -1;
       CurrentPixel = 0;
+      PixelOffset = 0;
     } else {
     PPUClocks++;
     CurrentPixel++;
@@ -140,11 +151,11 @@ void PPU::Execute(float PPUClock) {
 }
 
 void PPU::DrawPixel(unsigned char value, int Scanline, int Pixel) {
-  NESPixels[(Scanline*256)+Pixel] = value;
+  NESPixels[(Scanline*256)+Pixel-1] = value; // Scanline 0 is an idle scanline, so -1 so we don't overflow the pixel space here (so that pixel 256 actually appears on the right hand side)
 }
 
 void PPU::DrawPixelTest(unsigned char value, int Scanline, int Pixel, unsigned char ID) {
-  NESPixels[(Scanline*256)+Pixel] = value-ID;
+  NESPixels[(Scanline*256)+Pixel-1] = value-ID;
 }
 
 void PPU::Draw(sf::RenderWindow &mWindow) {
@@ -214,6 +225,23 @@ unsigned char PPU::ReadNametableByte(int Pixel, int Scanline) {
   int TileY = (Scanline/8)*32;
 
   return Nametables[0].Data[TileX + TileY];
+}
+
+void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
+      // This assumes that the "Pixel" number is bit shifted with each line
+      // Fetch a pixel of character data from CHR and render it
+      unsigned short Lo = PPU::ReadPatternTable(ID)<<CurrentPixel;
+      unsigned short Hi = PPU::ReadPatternTable(8+ID)<<CurrentPixel;
+
+      // Draw a pixel on screen of temporary colour for now
+      int PixelColour = GetBit(7,Lo);
+      int PixelColour1 = PixelColour + GetBit(7,Hi);
+
+}
+
+unsigned char PPU::ReadPatternTable(unsigned short Location) {
+  if (mainCartridge->Mapper == 0)
+    return mainCartridge->cROM[Location];
 }
 
 void PPU::DisplayNametableID(unsigned char ID,int Pixel,int Scanline) {

@@ -1,11 +1,12 @@
 #include "ProjectInfo.h"
 #include <sstream>
 #include <iostream>
+#include "Cartridge.h"
 #include "MainSystem.h"
 
 MainSystem::MainSystem()
 {
-  mainPPU = new PPU();
+  mainPPU = new PPU(*mainMemory->mainCartridge);
   mainMemory = new MemoryManager(*mainPPU);
   mainCPU = new CPU6502(*mainMemory);
   frameRate = new sf::Clock;

@@ -17,7 +17,7 @@ struct Nametable {
 class PPU {
 
 public:
-  PPU();
+  PPU(Cartridge &cart);
   void Reset();
   void Execute(float PPUClock);
   void Draw(sf::RenderWindow &mWindow);
@@ -38,7 +38,7 @@ private:
   sf::Color GetColour(unsigned char NESColour);
   unsigned char *NESPixels;
   void DrawPixel(unsigned char value, int Scanline, int Pixel);
-  void DrawPixelTest(unsigned char value, int Scanline, int Pixel, unsigned char ID); 
+  void DrawPixelTest(unsigned char value, int Scanline, int Pixel, unsigned char ID);
   sf::Sprite *displaySprite;
   unsigned char SetBit(int bit, bool val,unsigned char value);
   bool GetBit(int bit, unsigned char value);
@@ -57,4 +57,11 @@ private:
   unsigned char ReadNametable(unsigned short Location);
   unsigned char ReadNametableByte(int Pixel, int Scanline);
   void DisplayNametableID(unsigned char ID,int Pixel,int Scanline);
+  void RenderTilePixel(unsigned char ID, int Pixel, int Scanline);
+  unsigned char ReadPatternTable(unsigned short Location);
+  Cartridge *mainCartridge;
+  int PixelOffset;
+  unsigned char nametablebyte;
+  int OldTileX;
+  int OldTileY;
 };
