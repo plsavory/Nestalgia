@@ -52,7 +52,8 @@ private:
   void SelectAddress(unsigned char value);
   int AddressSelectCounter;
   unsigned char DataAddresses[1];
-  unsigned short db;
+  unsigned short db; // Internal data bus register
+  unsigned char finex; // Finex register (Contains currently drawing pixel)
   //unsigned char Memory[0x3FFF]; // main PPU memory (16kB)
   unsigned char OAM[256];
   Nametable Nametables[3]; // PPU has 4 nametables.

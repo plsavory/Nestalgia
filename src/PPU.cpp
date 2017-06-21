@@ -98,6 +98,9 @@ void PPU::Execute(float PPUClock) {
       //if (PixelOffset == 0)
       int Pixel = CurrentCycle-1; // Account for the non-drawing cycle
 
+      if (CurrentCycle == 0)
+        finex = 7; // Reset finex on the idle scanline
+
       if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240) {
 
       if ((Pixel & 7) == 0) {
@@ -111,14 +114,17 @@ void PPU::Execute(float PPUClock) {
         //DrawPixelTest(0x33,CurrentScanline,Pixel,nametablebyte);
 
       // Next need to draw the actual pixel bitmap
-      bool lo = GetBit(7,bitmapLo);
-      bool hi = GetBit(7,bitmapHi);
+      bool lo = GetBit(finex,bitmapLo);
+      bool hi = GetBit(finex,bitmapHi);
+
+      finex--;
+      finex&=7; // 3-bit register, bit 4 should always be 0.
 
       DrawBitmapPixel(lo,hi,Pixel,CurrentScanline);
 
       // Bit shift the bitmap for the next pixel
-      bitmapLo = (bitmapLo<<1);
-      bitmapHi = (bitmapHi<<1);
+      //bitmapLo = (bitmapLo<<1);
+      //bitmapHi = (bitmapHi<<1);
 
       PixelOffset++; // The pixel offset of the current tile
 
