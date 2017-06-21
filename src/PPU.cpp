@@ -17,6 +17,7 @@ PPU::PPU() {
   displayTexture->create(256,240);
   displaySprite->setTexture(*displayTexture);
   displaySprite->setScale(3,3);
+  NametableMirrorMode = 0;
   Reset();
   NMI_Fired = false;
 }
@@ -258,7 +259,13 @@ void PPU::WriteMemory(unsigned short Location, unsigned char value) {
 
 unsigned char PPU::NB() {
   // Increment the address bus depending on the value of the address increment flag
-  int inc = 1 + (GetBit(Registers[0],2)*31);
+  int inc;
+
+  if (GetBit(2,Registers[0]))
+    inc = 32;
+  else
+    inc = 1;
+
   return (db+=inc);
 }
 
@@ -284,12 +291,13 @@ unsigned char PPU::ReadNametableByte(int Pixel, int Scanline) {
  */
 	// Get the ID of the bitmap data for target nametable entry
 	unsigned char data = Nametables[0].Data[TileX + TileY];
+  int PatternOffset = 0;
 
   int PatternToRead = (data)*16;
 
 	// Fill the bitmap shift registers with the CHR data for this tile
-	bitmapLo = ReadPatternTable(PatternToRead+CurrentpxLine);
-	bitmapHi = ReadPatternTable(8+PatternToRead+CurrentpxLine);
+	bitmapLo = ReadPatternTable(PatternOffset+(PatternToRead+CurrentpxLine));
+	bitmapHi = ReadPatternTable(PatternOffset+(8+PatternToRead+CurrentpxLine));
 
 	return data;
 }
@@ -308,7 +316,10 @@ void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
 
 unsigned char PPU::ReadPatternTable(unsigned short Location) {
   // Add more logic to this later for handling mappers
-  unsigned short offset = GetBit(4,Registers[0])*0x1000;
+  unsigned short offset = 0x0;
+
+  if (GetBit(4,Registers[0]))
+    offset = 0x1000;
   return cROM[offset+Location];
 }
 
@@ -329,20 +340,25 @@ void PPU::SelectAddress(unsigned char value) {
   // The following byte is the lsb of the target address
   // Need to store these somewhere and detect when two writes have occured.
 
+  if (AddressSelectCounter < 2) {
+    // If we don't have two writes, that means the address has not been selected yet.
+    DataAddresses[AddressSelectCounter] = value;
+    AddressSelectCounter++;
+  }
+
   if (AddressSelectCounter == 2) {
     db = ((unsigned short)DataAddresses[1]) + ((unsigned short)DataAddresses[0] << 8);
+    //db &= 0x3FFF;
     AddressSelectCounter = 0;
-
+    DataAddresses[0] = 0x0;
+    DataAddresses[1] = 0x0;
     #ifdef DATABUSLOGGING
     std::cout<<"PPU_DATA Location Selected: $"<<std::hex<<(int)db<<std::endl;
     #endif
 
   }
-  else {
-    // If we don't have two writes, that means the address has not been selected yet.
-    DataAddresses[AddressSelectCounter] = value;
-    AddressSelectCounter++;
-  }
+
+
 }
 
 unsigned char PPU::ReadRegister(unsigned short Location) {
@@ -376,17 +392,45 @@ void PPU::WriteNametable(unsigned short Location,unsigned char Value) {
     TargetNametable = 3;
   }
 
-  unsigned short WriteLocation = Location-(0x400*TargetNametable);
-
-  #ifdef DATABUSLOGGING
+  //unsigned short WriteLocation = Location-(0x400*TargetNametable);
+  unsigned short WriteLocation = Location & 0x3FF;
+//  #ifdef DATABUSLOGGING
   std::cout<<std::hex<<"NAMETABLE "<<(int) TargetNametable<<" WRITE at: $"<<(int)OldLocation<<" : $"<<(int)Location<< " : $"<<(int) WriteLocation<<" = $"<<(int)Value<<std::endl;
-  #endif
+//  #endif
 
   // Write the data to the Nametable
+  if (NametableMirrorMode == 0) {
+    // Vertical mirroring
+    if (TargetNametable == 0 || TargetNametable == 1)
+      {
+        // Nametables 0 and 1 mirror eachother in this mode (2000 & 2400)
+        Nametables[0].Data[WriteLocation] = Value;
+        Nametables[1].Data[WriteLocation] = Value;
+      } else
+      {
+        Nametables[2].Data[WriteLocation] = Value;
+        Nametables[3].Data[WriteLocation] = Value;
+      }
+  }
+
+  if (NametableMirrorMode == 1) {
+    // Horizontal mirroring
+    if (TargetNametable == 0 || TargetNametable == 2) {
+      Nametables[0].Data[WriteLocation] = Value;
+      Nametables[2].Data[WriteLocation] = Value;
+    } else
+    {
+      Nametables[1].Data[WriteLocation] = Value;
+      Nametables[2].Data[WriteLocation] = Value;
+    }
+  }
+
+/*
   if (Nametables[TargetNametable].Type == 2)
       Nametables[TargetNametable].Data[WriteLocation] = Value; // Nametable is not mirrored, so write it directly in
   else
       Nametables[Nametables[TargetNametable].Type].Data[WriteLocation] = Value; // if type is not 3, this nametable mirrors to another one.
+*/
 }
 
 void PPU::WriteRegister(unsigned short Register,unsigned char value) {
@@ -405,6 +449,13 @@ void PPU::WriteRegister(unsigned short Register,unsigned char value) {
     Registers[Register] = value;
     break;
   }
+
+  // Write the 5 least significant bits of the written value to the PPUStatus register
+  unsigned char lsb = value;
+  lsb = SetBit(7,0,lsb);
+  lsb = SetBit(6,0,lsb);
+  lsb = SetBit(5,0,lsb);
+  Registers[2] = Registers[2] + lsb;
 
   #ifdef PPULogging
   if (Register == 0) {

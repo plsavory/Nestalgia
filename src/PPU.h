@@ -31,6 +31,7 @@ public:
   void WriteCROM(unsigned short Location,unsigned char Value);
   unsigned char ReadCROM(unsigned short Location);
   bool CHRRAM;
+  int NametableMirrorMode;
 private:
   int PPUClocks;
   int TileCounter;
