@@ -90,8 +90,8 @@ void MainSystem::Run()
   MainWindow.setFramerateLimit(60);
   MainWindow.setTitle(BuildString.str());
 
-  // Working in milliseconds
-  const double oneframe = 1000/60; // Will need to work on the timing when emulator is more complete. for some reason frame rate is showing 30fps unless I put 120 here.
+  // Working in milliseconds (Multiplier 2x makes it run at 60fps, will have to look into the timing issues when more roms run.)
+  const double oneframe = 1000/120; // Will need to work on the timing when emulator is more complete. for some reason frame rate is showing 30fps unless I put 120 here.
   sf::Clock FrameTime;
   fps = 0;
 

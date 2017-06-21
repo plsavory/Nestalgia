@@ -39,6 +39,7 @@ private:
 	unsigned char ReadNROM(unsigned short Location);
 	bool IRQLine;
 	bool NMILine;
+	bool GetBit(int bit, unsigned char value);
 };
 
 /*

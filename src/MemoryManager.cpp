@@ -146,6 +146,15 @@ int MemoryManager::LoadFile(std::string FilePath)
 	return 0;
 }
 
+bool MemoryManager::GetBit(int bit, unsigned char value)
+{
+	// Figures out the value of a current flag by AND'ing the flag register against the flag that needs extracting.
+	if (value & (1 << bit))
+		return true;
+	else
+		return false;
+}
+
 int MemoryManager::CheckCartridge(Cartridge &cartridge)
 {
 	switch(cartridge.FileFormat)
@@ -167,6 +176,9 @@ int MemoryManager::CheckCartridge(Cartridge &cartridge)
 				std::cout<<"ROM has a trainer attached."<<std::endl;
 			else
 				std::cout<<"ROM does not have a trainer attached."<<std::endl;
+
+			// Check which vertical mirroring mode the ROM uses
+			mainPPU->NametableMirrorMode = GetBit(0,cartridge.Header[6]);
 
 			// Store the mapper ID
 
