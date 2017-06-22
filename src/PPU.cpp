@@ -246,15 +246,17 @@ void PPU::RenderNametable(int Nametable, int OffsetX, int OffsetY) {
   }
 }
 
-// CPU Read/Write functions - handle when the CPU writes or reads the PPUDATA registers
-unsigned char PPU::PPUDRead() {
-
-}
-
 void PPU::PPUDWrite(unsigned char value) {
   // Write the value to the PPU's memory, then increment the data bus
   WriteMemory(db,value);
   NB();
+}
+
+unsigned char PPU::PPUDRead() {
+  unsigned char RetVal = 0;
+  RetVal = ReadMemory(db);
+  NB();
+  return RetVal;
 }
 
 void PPU::WriteMemory(unsigned short Location, unsigned char value) {
@@ -271,6 +273,14 @@ void PPU::WriteMemory(unsigned short Location, unsigned char value) {
   if (Location >= 0x2000 && Location <= 0x2FFF)
     WriteNametable(Location,value); // Write to the appropriate nametable
 }
+
+unsigned char PPU::ReadMemory(unsigned short Location) {
+  if (Location <= 0x1FFF)
+    return cROM[Location];
+
+  if (Location >= 0x2000 && Location <= 0x2FFF)
+    return ReadNametable(Location);
+  }
 
 unsigned char PPU::NB() {
   // Increment the address bus depending on the value of the address increment flag
@@ -421,17 +431,23 @@ void PPU::SelectAddress(unsigned char value) {
 unsigned char PPU::ReadRegister(unsigned short Location) {
   unsigned char RetVal;
 
+
+  //  std::cout<<"PPU_Read_Register: $"<<(int)Location<<std::endl;
+
   switch (Location)
   {
     case 2:
     AddressSelectCounter = 0; // Reading from the PPUADDR register means the CPU wants to reset the address writing.
     RetVal = Registers[2]; // We need to clear the vblank flag when this register is read, so store its previous state here
     Registers[2] = SetBit(7,0,Registers[2]); // Clear the vblank flag
-
     return RetVal;
+    case 0x7:
+    return PPUDRead();
+    break;
     default:
     return Registers[Location];
   }
+
 }
 
 unsigned char PPU::ReadNametable(unsigned short Location) {

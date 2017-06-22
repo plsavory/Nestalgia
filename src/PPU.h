@@ -60,6 +60,7 @@ private:
   unsigned char OAM[256];
   Nametable Nametables[3]; // PPU has 4 nametables.
   void WriteMemory(unsigned short Location, unsigned char value);
+  unsigned char ReadMemory(unsigned short Location);
   void WriteNametable(unsigned short Location,unsigned char Value);
   unsigned char ReadNametable(unsigned short Location);
   unsigned char ReadNametableByte(int Pixel, int Scanline);
