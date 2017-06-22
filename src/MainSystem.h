@@ -1,6 +1,7 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
+#include "InputManager.h"
 #include "PPU.h"
 #include "MemoryManager.h"
 #include "CPU6502.h"
@@ -15,6 +16,7 @@ public:
   void Reset();
   void Run();
 private:
+  InputManager *mainInput;
   MemoryManager *mainMemory;
   CPU6502 *mainCPU;
   PPU *mainPPU;

@@ -6,6 +6,7 @@
 
 MainSystem::MainSystem()
 {
+  mainInput = new InputManager();
   mainPPU = new PPU();
   mainMemory = new MemoryManager(*mainPPU);
   mainCPU = new CPU6502(*mainMemory);
@@ -29,6 +30,9 @@ void MainSystem::Execute() {
   // Only NTSC is supported right now - will add PAL timings in future.
   const double MasterClocksPerFrame = 21477272/60;
   int ClocksThisFrame;
+
+  // Update to current controller input
+  mainInput->Update();
 
   // Loop through all of the machine clicks that we need to
   while ((ClocksThisFrame < MasterClocksPerFrame) && mainCPU->myState==CPUState::Running)

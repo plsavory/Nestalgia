@@ -9,6 +9,18 @@ struct Key {
   int JoystickID;
   int JoystickButton;
   int JoystickAxis;
+
+  Key() {
+    // By default, use keyboard controls
+    myType = InputType::iKeyboard;
+  }
+
+  bool isPressed() {
+    if (myType == InputType::iKeyboard) {
+      // Return if the key in question is pressed or not
+      return sf::Keyboard::isKeyPressed(keyCode);
+    }
+  }
 };
 
 struct Keymap {
@@ -34,7 +46,7 @@ struct Keymap {
     A.myType = InputType::iKeyboard;
     A.keyCode = sf::Keyboard::A;
     B.myType = InputType::iKeyboard;
-    B.keyCode = sf::Keyboard::B;
+    B.keyCode = sf::Keyboard::S;
     Start.myType = InputType::iKeyboard;
     Start.keyCode = sf::Keyboard::Return;
     Select.myType = InputType::iKeyboard;
@@ -44,6 +56,7 @@ struct Keymap {
 
 
 struct Controller {
+  Keymap myKeymap;
   bool Up;
   bool Down;
   bool Left;
@@ -57,6 +70,19 @@ struct Controller {
   {
     Up = false; Down = false; Left = false; Right = false; A = false; B = false; Start = false; Select = false;
   }
+
+  void Update() {
+    // Update all of the values within this struct
+    Up = myKeymap.Up.isPressed();
+    Down = myKeymap.Down.isPressed();
+    Left = myKeymap.Left.isPressed();
+    Right = myKeymap.Right.isPressed();
+    A = myKeymap.A.isPressed();
+    B = myKeymap.B.isPressed();
+    Start = myKeymap.Start.isPressed();
+    Select = myKeymap.Select.isPressed();
+  }
+
 };
 
 };
