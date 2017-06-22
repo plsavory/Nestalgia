@@ -5,6 +5,7 @@
 #include <SFML/Graphics.hpp>
 #include "Cartridge.h"
 #include "PPU.h"
+#include "InputManager.h"
 #include "MemoryManager.h"
 #include <fstream>
 #include <sstream>
@@ -19,10 +20,11 @@
 #define DISPLAYMEMACTIVITY1
 #define PPUONLYLOGGING
 
-MemoryManager::MemoryManager(PPU &mPPU)
+MemoryManager::MemoryManager(PPU &mPPU,InputManager &mInput)
 {
 	mapper = MemoryMapper::Test;
 	mainPPU = &mPPU; // Store a reference to the passed-on PPU object
+	mainInput = &mInput;
 
 	for (int i = 0x0; i < 0xFFFF; i++)
 		MainMemory[i] = 0x0;
@@ -282,6 +284,11 @@ void MemoryManager::WriteMemory(unsigned short Location, unsigned char Value)
 	{
 		WritePPU(Location,Value);
 	}
+
+	if (Location == 0x4016) {
+		mainInput->WriteStatus(Location);
+	}
+
 	if (Location >= 0x4020)
 		WriteCartridge(Location,Value);
 
@@ -369,6 +376,12 @@ unsigned char MemoryManager::ReadMemory(unsigned short Location)
 	if ((Location >= 0x2000) && (Location <= 0x3FFF))
 	{
 		return ReadPPU(Location);
+	}
+
+	// Joypad registers
+	if (Location == 0x4016 || Location == 0x4017) {
+		//std::cout<<(int)mainInput->GetStatus(Location)<<std::endl;
+		return mainInput->GetStatus(Location);
 	}
 
 	if (Location >= 0x4020)

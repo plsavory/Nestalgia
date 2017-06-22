@@ -57,30 +57,24 @@ struct Keymap {
 
 struct Controller {
   Keymap myKeymap;
-  bool Up;
-  bool Down;
-  bool Left;
-  bool Right;
-  bool A;
-  bool B;
-  bool Start;
-  bool Select;
+  bool buttons[8];
 
   Controller()
   {
-    Up = false; Down = false; Left = false; Right = false; A = false; B = false; Start = false; Select = false;
+    for (int i = 0; i <8;i++)
+      buttons[i] = false;
   }
 
   void Update() {
     // Update all of the values within this struct
-    Up = myKeymap.Up.isPressed();
-    Down = myKeymap.Down.isPressed();
-    Left = myKeymap.Left.isPressed();
-    Right = myKeymap.Right.isPressed();
-    A = myKeymap.A.isPressed();
-    B = myKeymap.B.isPressed();
-    Start = myKeymap.Start.isPressed();
-    Select = myKeymap.Select.isPressed();
+    buttons[0] = myKeymap.A.isPressed();
+    buttons[1] = myKeymap.B.isPressed();
+    buttons[2] = myKeymap.Select.isPressed();
+    buttons[3] = myKeymap.Start.isPressed();
+    buttons[4] = myKeymap.Up.isPressed();
+    buttons[5] = myKeymap.Down.isPressed();
+    buttons[6] = myKeymap.Left.isPressed();
+    buttons[7] = myKeymap.Right.isPressed();
   }
 
 };
@@ -92,8 +86,12 @@ public:
   InputManager();
   ~InputManager();
   void Update(); // Updates the InputManager's state
-  void GetStatus(unsigned short Location); // Gets the current status of a controller and returns it in a format readable by the CPU
+  unsigned char GetStatus(unsigned short Location); // Gets the current status of a controller and returns it in a format readable by the CPU
+  void WriteStatus(unsigned short Location);
 private:
   Input::Controller controllers[1];
   void UpdateController(int Controller, Input::Keymap kmap);
+  unsigned char SetBit(int bit, bool val, unsigned char value);
+  int ReadCount[1]; // The number of times the CPU has read from the registers
+  bool GetButtonPress(int Read);
 };

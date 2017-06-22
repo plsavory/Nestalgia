@@ -5,7 +5,7 @@ enum HeaderData {Const0,Const1,Const2,Const3,PROMSize,CROMSize,Flags6,Flags7,PRA
 class MemoryManager
 {
 public:
-	MemoryManager(PPU &mPPU);
+	MemoryManager(PPU &mPPU,InputManager &mInput);
 	~MemoryManager();
 	int LoadFile(std::string FilePath);
 	unsigned char ReadMemory(unsigned short Location);
@@ -33,6 +33,7 @@ private:
 	unsigned char ReadPPU(unsigned short Location);
 	void WritePPU(unsigned short location,unsigned char value);
 	int CheckCartridge(Cartridge &cartridge);
+	InputManager *mainInput;
 	PPU *mainPPU;
 	MemoryMapper mapper;
 	// Mapper functions

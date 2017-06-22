@@ -8,7 +8,7 @@ MainSystem::MainSystem()
 {
   mainInput = new InputManager();
   mainPPU = new PPU();
-  mainMemory = new MemoryManager(*mainPPU);
+  mainMemory = new MemoryManager(*mainPPU,*mainInput);
   mainCPU = new CPU6502(*mainMemory);
   frameRate = new sf::Clock;
 }

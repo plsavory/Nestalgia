@@ -7,6 +7,7 @@
 #include <SFML/Graphics.hpp>
 #include "Cartridge.h"
 #include "PPU.h"
+#include "InputManager.h"
 #include "MemoryManager.h"
 #include "CPU6502.h"
 
