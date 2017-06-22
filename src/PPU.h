@@ -53,7 +53,9 @@ private:
   int AddressSelectCounter;
   unsigned char DataAddresses[1];
   unsigned short db; // Internal data bus register
+  unsigned short idb;
   unsigned char finex; // Finex register (Contains currently drawing pixel)
+  unsigned char finey;
   //unsigned char Memory[0x3FFF]; // main PPU memory (16kB)
   unsigned char OAM[256];
   Nametable Nametables[3]; // PPU has 4 nametables.
@@ -61,12 +63,15 @@ private:
   void WriteNametable(unsigned short Location,unsigned char Value);
   unsigned char ReadNametable(unsigned short Location);
   unsigned char ReadNametableByte(int Pixel, int Scanline);
+  unsigned char ReadNametableByteb(unsigned short databus);
   void DisplayNametableID(unsigned char ID,int Pixel,int Scanline);
   void RenderTilePixel(unsigned char ID, int Pixel, int Scanline);
   unsigned char ReadPatternTable(unsigned short Location);
   void DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline);
+  void SetDataBus(int Scanline, int Pixel);
   int PixelOffset;
   unsigned char nametablebyte;
+  int bitmapline;
   unsigned char bitmapLo;
   unsigned char bitmapHi;
   unsigned char cROM[0x80000]; // 512KiB max - PPU has its own memory for CHR data, this will be copied over from the MemoryManager's cartridge upon ROM load

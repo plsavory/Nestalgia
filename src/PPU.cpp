@@ -92,6 +92,10 @@ void PPU::Execute(float PPUClock) {
     {
           // Reset VBLANK flag
           Registers[2] = SetBit(7,0,Registers[2]);
+
+          // Set the data bus for initial rendering
+          int basenametable = GetBit(0,Registers[0]) + GetBit(1,Registers[0]);
+          idb = basenametable << 10; // Register layout is yyyNNYYYYYXXXXX
     }
 
       // Get the nametable byte for this tile
@@ -103,10 +107,15 @@ void PPU::Execute(float PPUClock) {
 
       if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240) {
 
-      if ((Pixel & 7) == 0) {
-        nametablebyte = ReadNametableByte(Pixel,CurrentScanline);
-
+      //if ((Pixel & 7) == 0) {
+      if (finex==7) {
+        //nametablebyte = ReadNametableByte(Pixel,CurrentScanline);
+        SetDataBus(CurrentScanline,Pixel);
+        nametablebyte = ReadNametableByteb(idb);
+        idb++; // Increment the data bus to fetch the next tile
       }
+
+      //}
 
       //if (CurrentScanline > 100)
       //std::cout<<"PixelTick"<<std::endl;
@@ -296,6 +305,7 @@ unsigned char PPU::ReadNametableByte(int Pixel, int Scanline) {
  }
  */
 	// Get the ID of the bitmap data for target nametable entry
+
 	unsigned char data = Nametables[0].Data[TileX + TileY];
   int PatternOffset = 0;
 
@@ -304,6 +314,46 @@ unsigned char PPU::ReadNametableByte(int Pixel, int Scanline) {
 	// Fill the bitmap shift registers with the CHR data for this tile
 	bitmapLo = ReadPatternTable(PatternOffset+(PatternToRead+CurrentpxLine));
 	bitmapHi = ReadPatternTable(PatternOffset+(8+PatternToRead+CurrentpxLine));
+
+	return data;
+}
+
+void PPU::SetDataBus(int Scanline, int Pixel) {
+  // Returns the location in memory of the requested nametable entry
+  int basenametable = GetBit(0,Registers[0]) + GetBit(1,Registers[0]);
+  idb = basenametable << 10; // Register layout is yyyNNYYYYYXXXXX
+  int coarsex = Scanline/8;
+  int coarsey = Pixel/8;
+  idb = idb+(coarsex << 5);
+  idb = idb+coarsey;
+
+  // Set the y position in the bitmap for this tile
+  bitmapline = Scanline & 7;
+}
+
+unsigned char PPU::ReadNametableByteb(unsigned short databus) {
+  // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
+  // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
+
+  //databus&=0xFFFF; // In the unlikely case that the most significant bit is set, un set it as we want to discard it.
+
+  // Ignore the top 3 bits of the data bus as this is relating to fine scroll (the MSB is not used as this is a 15-bit register)
+  unsigned short TileLocation = databus << 4;
+  TileLocation = TileLocation >> 4;
+  //TileLocation+=0x2000;
+
+  // Get the current fine Y scroll
+  //unsigned char finey = databus >> 12;
+
+	// Should be called once per tile (so 33 times per scanline) or every 8 pixels
+  unsigned char data = ReadNametable(0x2000+TileLocation);
+  int PatternOffset = 0;
+  int PatternToRead = (data)*16;
+
+	// Fill the bitmap shift registers with the CHR data for this tile
+	bitmapLo = ReadPatternTable(PatternOffset+(PatternToRead+bitmapline));
+	bitmapHi = ReadPatternTable(PatternOffset+(8+PatternToRead+bitmapline));
+  //std::cout<<(int)finey<<std::endl;
 
 	return data;
 }
@@ -382,6 +432,27 @@ unsigned char PPU::ReadRegister(unsigned short Location) {
     default:
     return Registers[Location];
   }
+}
+
+unsigned char PPU::ReadNametable(unsigned short Location) {
+    unsigned short OldLocation = Location;
+    Location-=0x2000; // Strip off the first $2000 - we don't need it
+    int TargetNametable = 0;
+
+    if (Location <= 0x3FF) {
+      TargetNametable = 0;
+    } else if (Location <= 0x7FF) {
+      TargetNametable = 1;
+    } else if (Location <= 0xBFF) {
+      TargetNametable = 2;
+    } else {
+      TargetNametable = 3;
+    }
+
+    //unsigned short WriteLocation = Location-(0x400*TargetNametable);
+    unsigned short ReadLocation = Location & 0x3FF;
+
+    return Nametables[TargetNametable].Data[ReadLocation];
 }
 
 void PPU::WriteNametable(unsigned short Location,unsigned char Value) {
