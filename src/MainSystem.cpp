@@ -11,6 +11,7 @@ MainSystem::MainSystem()
   mainMemory = new MemoryManager(*mainPPU,*mainInput);
   mainCPU = new CPU6502(*mainMemory);
   frameRate = new sf::Clock;
+  Focused = true;
 }
 
 MainSystem::~MainSystem()
@@ -32,7 +33,8 @@ void MainSystem::Execute() {
   int ClocksThisFrame;
 
   // Update to current controller input
-  mainInput->Update();
+  if (Focused)
+    mainInput->Update();
 
   // Loop through all of the machine clicks that we need to
   while ((ClocksThisFrame < MasterClocksPerFrame) && mainCPU->myState==CPUState::Running)
@@ -119,6 +121,15 @@ void MainSystem::Run()
         mainCPU->myState = CPUState::Halt;
         MainWindow.close();
       }
+
+      if (event.type == sf::Event::GainedFocus) {
+        Focused = true;
+      }
+
+      if (event.type == sf::Event::LostFocus) {
+        Focused = false;
+      }
+
     }
 
     // Update the emulator once per frame
