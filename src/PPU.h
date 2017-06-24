@@ -59,6 +59,7 @@ private:
   //unsigned char Memory[0x3FFF]; // main PPU memory (16kB)
   unsigned char OAM[256];
   Nametable Nametables[3]; // PPU has 4 nametables.
+  unsigned char PaletteMemory[0x0F]; // Memory for storing colour palette information
   void WriteMemory(unsigned short Location, unsigned char value);
   unsigned char ReadMemory(unsigned short Location);
   void WriteNametable(unsigned short Location,unsigned char Value);
@@ -69,6 +70,8 @@ private:
   void RenderTilePixel(unsigned char ID, int Pixel, int Scanline);
   unsigned char ReadPatternTable(unsigned short Location);
   void DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline);
+  unsigned char ReadPalette(unsigned short Location);
+  void WritePalette(unsigned short Location,unsigned char Value);
   void SetDataBus(int Scanline, int Pixel);
   int PixelOffset;
   unsigned char nametablebyte;

@@ -594,6 +594,16 @@ void PPU::WriteRegister(unsigned short Register,unsigned char value) {
 
 }
 
+unsigned char PPU::ReadPalette(unsigned short Location) {
+  Location-=0x3F00;
+  return PaletteMemory[Location];
+}
+void PPU::WritePalette(unsigned short Location, unsigned char Value) {
+  Location-=0x3F00;
+  //std::cout<<"Writing to Palette Memory: $"<<(int)Location<<std::endl;
+  PaletteMemory[Location] = Value;
+}
+
 sf::Color PPU::GetColour(unsigned char NESColour) {
   // Converts a NES colour to a sf::Color to be displayed on the actual emulator's output.
   sf::Color RetVal;
