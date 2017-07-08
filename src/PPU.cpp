@@ -20,6 +20,7 @@ PPU::PPU() {
   NametableMirrorMode = 0;
   Reset();
   NMI_Fired = false;
+  OldAttribute = 0;
 }
 
 bool PPU::GetBit(int bit, unsigned char value)
@@ -129,6 +130,10 @@ void PPU::Execute(float PPUClock) {
       finex--;
       finex&=7; // 3-bit register, bit 4 should always be 0.
 
+      // Read an attribute byte for it to display
+      currentAttribute = ReadAttribute(Pixel,CurrentScanline,0); // For now just read from the first attribute table to make sure things are working
+
+      ReadColour(currentAttribute,0);
       DrawBitmapPixel(lo,hi,Pixel,CurrentScanline);
 
       // Bit shift the bitmap for the next pixel
@@ -140,6 +145,8 @@ void PPU::Execute(float PPUClock) {
       // Reset the pixel counter if it goes above 7 as we'll need to fetch the next tile soon
       if (PixelOffset > 7)
         PixelOffset = 0;
+
+
     }
 
     // Handle switching to the next scanline here
@@ -159,6 +166,8 @@ void PPU::Execute(float PPUClock) {
       {
         NMI_Fired = true;
         //std::cout<<"PPU: Fired NMI"<<std::endl;
+
+        frame = 1; // Just so we don't get spammed by std::couts
       }
 
 
@@ -189,16 +198,19 @@ void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline) {
   switch (pixelvalue)
   {
     case 0:
-      col = 0x3E;
+      col = ReadPalette(0x3F00);
     break;
       case 1:
-      col = 0x24;
+      col = currentPalette.Colours[0];
+      //col = 0x24;
     break;
     case 2:
-      col = 0x1B;
+      col = currentPalette.Colours[1];
+    //col = 0x1B;
     break;
     case 3:
-      col = 0x1;
+      col = currentPalette.Colours[2];
+      //col = 0x1;
     break;
   }
 
@@ -272,6 +284,9 @@ void PPU::WriteMemory(unsigned short Location, unsigned char value) {
 
   if (Location >= 0x2000 && Location <= 0x2FFF)
     WriteNametable(Location,value); // Write to the appropriate nametable
+
+  if (Location >= 0x3F00 && Location <= 0x4F1F)
+    WritePalette(Location,value);
 }
 
 unsigned char PPU::ReadMemory(unsigned short Location) {
@@ -280,6 +295,9 @@ unsigned char PPU::ReadMemory(unsigned short Location) {
 
   if (Location >= 0x2000 && Location <= 0x2FFF)
     return ReadNametable(Location);
+
+  if (Location >= 0x3F00 && Location <= 0x3F1F)
+    return ReadPalette(Location);
   }
 
 unsigned char PPU::NB() {
@@ -594,14 +612,77 @@ void PPU::WriteRegister(unsigned short Register,unsigned char value) {
 
 }
 
+unsigned char PPU::ReadAttribute(int Pixel, int Scanline, int Nametable) {
+  // Read the Attribute for this tile and return the colour palette that it should be using
+  // 1 Atrribute byte covers a 32x32 pixel are of the screen (4x4 tiles)
+  int AttributeX = (Pixel/8)/4;
+  int AttributeY = ((Scanline/8)/4) * 8;
+
+  //unsigned char Attribute = Nametables[Nametable].Data[0xC0+(AttributeX+AttributeY)];
+  int Location = 0x23C0+(AttributeX+AttributeY);
+
+  if (Location != OldAttribute && frame == 0 && (Pixel & 8) == 0 && (Scanline & 8) == 0) {
+    std::cout<<"Read Attribute: $"<<std::hex<<(int)Location<<std::dec<<" Pixel: "<<(int)Pixel<<" Scanline: "<<(int)Scanline<<" X: "<<(int)AttributeX<<" Y: "<<(int)AttributeY<<std::endl;
+    OldAttribute = Location;
+  }
+
+  unsigned char Attribute = ReadNametable(Location);
+
+  // Each attribute byte contains data for the colour palette listing of 8 tiles, so we need to figure out which tile we are currently working on
+  //int CurrentXTile = (Pixel/16) & 2;
+  //int CurrentYTile = ((Scanline/16) & 2)*2;
+
+  //int CurrentXTile = (AttributeX/2) % 2;
+  int CurrentXTile = ((Pixel/8)/2) % 2;
+  int CurrentYTile = ((Scanline/8)/2) % 2;
+
+  //int xPix = (CurrentXTile >> 1) % 2;
+  //int yPix = (CurrentYTile >> 1) % 2;
+
+  int xPix = CurrentXTile;
+  int yPix = CurrentYTile;
+
+  unsigned char tempstore1 = yPix << 1 | xPix;
+  unsigned char tempstore2 = (Attribute >> (tempstore1 * 2) << 2) & 0x0C;
+
+    //std::cout<<"Reading Attribute: $"<<std::hex<<(int)CurrentXTile+CurrentYTile<<std::endl;
+
+  return tempstore2;
+
+}
+
+void PPU::ReadColour(int Attribute,int col) {
+  int Location = 0x3F01+(Attribute*4);
+
+  currentPalette.Colours[0] = ReadPalette(Location);
+  currentPalette.Colours[1] = ReadPalette(Location+1);
+  currentPalette.Colours[2] = ReadPalette(Location+2);
+
+}
+
 unsigned char PPU::ReadPalette(unsigned short Location) {
   Location-=0x3F00;
   return PaletteMemory[Location];
 }
 void PPU::WritePalette(unsigned short Location, unsigned char Value) {
   Location-=0x3F00;
-  //std::cout<<"Writing to Palette Memory: $"<<(int)Location<<std::endl;
-  PaletteMemory[Location] = Value;
+
+  // Handle the mirrored values
+  if (Location == 0x0 || Location == 0x10) {
+    PaletteMemory[0x0] = Value;
+    PaletteMemory[0x10] = Value;
+  } else if (Location == 0x04 || Location == 0x14) {
+    PaletteMemory[0x04] = Value;
+    PaletteMemory[0x14] = Value;
+  } else if (Location == 0x08 || Location == 0x18) {
+    PaletteMemory[0x08] = Value;
+    PaletteMemory[0x18] = Value;
+  } else if (Location == 0x0C || Location == 0x1C) {
+    PaletteMemory[0x0C] = Value;
+    PaletteMemory[0x1C] = Value;
+  } else {
+    PaletteMemory[Location] = Value;
+  }
 }
 
 sf::Color PPU::GetColour(unsigned char NESColour) {

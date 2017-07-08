@@ -14,6 +14,10 @@ struct Nametable {
     }
 };
 
+struct Palette {
+  unsigned char Colours[2];
+};
+
 class PPU {
 
 public:
@@ -59,13 +63,15 @@ private:
   //unsigned char Memory[0x3FFF]; // main PPU memory (16kB)
   unsigned char OAM[256];
   Nametable Nametables[3]; // PPU has 4 nametables.
-  unsigned char PaletteMemory[0x0F]; // Memory for storing colour palette information
+  unsigned char PaletteMemory[0x1F]; // Memory for storing colour palette information
   void WriteMemory(unsigned short Location, unsigned char value);
   unsigned char ReadMemory(unsigned short Location);
   void WriteNametable(unsigned short Location,unsigned char Value);
   unsigned char ReadNametable(unsigned short Location);
   unsigned char ReadNametableByte(int Pixel, int Scanline);
   unsigned char ReadNametableByteb(unsigned short databus);
+  unsigned char ReadAttribute(int Pixel, int Scanline,int Nametable);
+  void ReadColour(int Attribute,int col);
   void DisplayNametableID(unsigned char ID,int Pixel,int Scanline);
   void RenderTilePixel(unsigned char ID, int Pixel, int Scanline);
   unsigned char ReadPatternTable(unsigned short Location);
@@ -76,7 +82,14 @@ private:
   int PixelOffset;
   unsigned char nametablebyte;
   int bitmapline;
+  int currentAttribute;
   unsigned char bitmapLo;
   unsigned char bitmapHi;
+  Palette currentPalette;
+  int PaletteX;
+  int PaletteY;
   unsigned char cROM[0x80000]; // 512KiB max - PPU has its own memory for CHR data, this will be copied over from the MemoryManager's cartridge upon ROM load
+  int frame = 0;
+  int OldAttribute;
+  //int HexColours[] = {0x7C7C7C,0x0000FC,0x0000BC,0x4428BC,0x940084,0xA80020,0x81000,0x881400,0x503000,0x007800,0x006800,0x005800,0x004058,0x0,0x0,0x0};
 };

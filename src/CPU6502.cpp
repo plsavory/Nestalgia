@@ -11,7 +11,7 @@
 #include "MemoryManager.h"
 #include "CPU6502.h"
 
-#define LOGCPUTOFILE555
+#define LOGCPUTOFILE
 #define PRINTCPUSTATUS56
 
 CPU6502::CPU6502(MemoryManager &mManager)
