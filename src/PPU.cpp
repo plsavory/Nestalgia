@@ -285,7 +285,7 @@ void PPU::WriteMemory(unsigned short Location, unsigned char value) {
   if (Location >= 0x2000 && Location <= 0x2FFF)
     WriteNametable(Location,value); // Write to the appropriate nametable
 
-  if (Location >= 0x3F00 && Location <= 0x4F1F)
+  if (Location >= 0x3F00 && Location <= 0x3F1F)
     WritePalette(Location,value);
 }
 
@@ -621,10 +621,12 @@ unsigned char PPU::ReadAttribute(int Pixel, int Scanline, int Nametable) {
   //unsigned char Attribute = Nametables[Nametable].Data[0xC0+(AttributeX+AttributeY)];
   int Location = 0x23C0+(AttributeX+AttributeY);
 
+/*
   if (Location != OldAttribute && frame == 0 && (Pixel & 8) == 0 && (Scanline & 8) == 0) {
     std::cout<<"Read Attribute: $"<<std::hex<<(int)Location<<std::dec<<" Pixel: "<<(int)Pixel<<" Scanline: "<<(int)Scanline<<" X: "<<(int)AttributeX<<" Y: "<<(int)AttributeY<<std::endl;
     OldAttribute = Location;
   }
+  */
 
   unsigned char Attribute = ReadNametable(Location);
 
@@ -636,16 +638,10 @@ unsigned char PPU::ReadAttribute(int Pixel, int Scanline, int Nametable) {
   int CurrentXTile = ((Pixel/8)/2) % 2;
   int CurrentYTile = ((Scanline/8)/2) % 2;
 
-  //int xPix = (CurrentXTile >> 1) % 2;
-  //int yPix = (CurrentYTile >> 1) % 2;
+  unsigned char tempstore1 = (CurrentYTile << 1) | CurrentXTile; // The current tile number that we're on (0,1,2 or 3)
+  //unsigned char tempstore2 = (Attribute >> (tempstore1*2));
 
-  int xPix = CurrentXTile;
-  int yPix = CurrentYTile;
-
-  unsigned char tempstore1 = yPix << 1 | xPix;
-  unsigned char tempstore2 = (Attribute >> (tempstore1 * 2) << 2) & 0x0C;
-
-    //std::cout<<"Reading Attribute: $"<<std::hex<<(int)CurrentXTile+CurrentYTile<<std::endl;
+  unsigned char tempstore2 = (Attribute >> (tempstore1*2)) & 0x3;
 
   return tempstore2;
 
@@ -653,6 +649,21 @@ unsigned char PPU::ReadAttribute(int Pixel, int Scanline, int Nametable) {
 
 void PPU::ReadColour(int Attribute,int col) {
   int Location = 0x3F01+(Attribute*4);
+
+  switch (Attribute) {
+    case 0:
+      Location = 0x3F01;
+    break;
+    case 1:
+      Location = 0x3F05;
+    break;
+    case 2:
+      Location = 0x3F09;
+    break;
+    case 3:
+      Location = 0x3F0D;
+    break;
+  }
 
   currentPalette.Colours[0] = ReadPalette(Location);
   currentPalette.Colours[1] = ReadPalette(Location+1);
@@ -665,6 +676,7 @@ unsigned char PPU::ReadPalette(unsigned short Location) {
   return PaletteMemory[Location];
 }
 void PPU::WritePalette(unsigned short Location, unsigned char Value) {
+  std::cout<<"Palette_Write: $"<<std::hex<<(int)Location<<" = "<<(int)Value<<std::endl;
   Location-=0x3F00;
 
   // Handle the mirrored values
@@ -680,9 +692,8 @@ void PPU::WritePalette(unsigned short Location, unsigned char Value) {
   } else if (Location == 0x0C || Location == 0x1C) {
     PaletteMemory[0x0C] = Value;
     PaletteMemory[0x1C] = Value;
-  } else {
-    PaletteMemory[Location] = Value;
   }
+    PaletteMemory[Location] = Value;
 }
 
 sf::Color PPU::GetColour(unsigned char NESColour) {
