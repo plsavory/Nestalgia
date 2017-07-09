@@ -621,25 +621,13 @@ unsigned char PPU::ReadAttribute(int Pixel, int Scanline, int Nametable) {
   //unsigned char Attribute = Nametables[Nametable].Data[0xC0+(AttributeX+AttributeY)];
   int Location = 0x23C0+(AttributeX+AttributeY);
 
-/*
-  if (Location != OldAttribute && frame == 0 && (Pixel & 8) == 0 && (Scanline & 8) == 0) {
-    std::cout<<"Read Attribute: $"<<std::hex<<(int)Location<<std::dec<<" Pixel: "<<(int)Pixel<<" Scanline: "<<(int)Scanline<<" X: "<<(int)AttributeX<<" Y: "<<(int)AttributeY<<std::endl;
-    OldAttribute = Location;
-  }
-  */
-
   unsigned char Attribute = ReadNametable(Location);
 
-  // Each attribute byte contains data for the colour palette listing of 8 tiles, so we need to figure out which tile we are currently working on
-  //int CurrentXTile = (Pixel/16) & 2;
-  //int CurrentYTile = ((Scanline/16) & 2)*2;
-
-  //int CurrentXTile = (AttributeX/2) % 2;
+  // Each attribute byte contains data for the colour palette listing of 4 tiles, so we need to figure out which tile we are currently working on
   int CurrentXTile = ((Pixel/8)/2) % 2;
   int CurrentYTile = ((Scanline/8)/2) % 2;
 
   unsigned char tempstore1 = (CurrentYTile << 1) | CurrentXTile; // The current tile number that we're on (0,1,2 or 3)
-  //unsigned char tempstore2 = (Attribute >> (tempstore1*2));
 
   unsigned char tempstore2 = (Attribute >> (tempstore1*2)) & 0x3;
 
@@ -676,7 +664,7 @@ unsigned char PPU::ReadPalette(unsigned short Location) {
   return PaletteMemory[Location];
 }
 void PPU::WritePalette(unsigned short Location, unsigned char Value) {
-  std::cout<<"Palette_Write: $"<<std::hex<<(int)Location<<" = "<<(int)Value<<std::endl;
+  
   Location-=0x3F00;
 
   // Handle the mirrored values
