@@ -54,8 +54,10 @@ private:
   void PPUDWrite(unsigned char value);
   unsigned char NB();
   void SelectAddress(unsigned char value);
+  void SelectOAMAddress(unsigned char value);
   int AddressSelectCounter;
   unsigned char DataAddresses[1];
+  unsigned char OAMAddress;
   unsigned short db; // Internal data bus register
   unsigned short idb;
   unsigned char finex; // Finex register (Contains currently drawing pixel)
@@ -65,6 +67,8 @@ private:
   Nametable Nametables[3]; // PPU has 4 nametables.
   unsigned char PaletteMemory[0x1F]; // Memory for storing colour palette information
   void WriteMemory(unsigned short Location, unsigned char value);
+  void WriteOAM(unsigned short Location, unsigned char value);
+  void WriteOAM(unsigned char value);
   unsigned char ReadMemory(unsigned short Location);
   void WriteNametable(unsigned short Location,unsigned char Value);
   unsigned char ReadNametable(unsigned short Location);

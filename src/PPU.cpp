@@ -21,6 +21,7 @@ PPU::PPU() {
   Reset();
   NMI_Fired = false;
   OldAttribute = 0;
+  OAMAddress = 0;
 }
 
 bool PPU::GetBit(int bit, unsigned char value)
@@ -442,8 +443,21 @@ void PPU::SelectAddress(unsigned char value) {
 
   }
 
+}
 
+void PPU::SelectOAMAddress(unsigned char value) {
+  OAMAddress = value;
+}
 
+void PPU::WriteOAM(unsigned short Location, unsigned char value) {
+  // Will be used to implement OAMDMA
+  OAM[Location] = value;
+}
+
+void PPU::WriteOAM(unsigned char value) {
+  // Perform a single write to OAM
+  OAM[OAMAddress] = value;
+  OAMAddress++;
 }
 
 unsigned char PPU::ReadRegister(unsigned short Location) {
@@ -550,6 +564,14 @@ void PPU::WriteRegister(unsigned short Register,unsigned char value) {
   {
     case 2:
       // Register 2 is read only
+    break;
+    case 3:
+      // Select OAM address
+      SelectOAMAddress(value);
+    break;
+    case 4:
+      // Write to PPU OAM
+      WriteOAM(value);
     break;
     case 6:
     SelectAddress(value); // PPU is writing to PPUDATA, so handle address selecting
@@ -664,7 +686,7 @@ unsigned char PPU::ReadPalette(unsigned short Location) {
   return PaletteMemory[Location];
 }
 void PPU::WritePalette(unsigned short Location, unsigned char Value) {
-  
+
   Location-=0x3F00;
 
   // Handle the mirrored values
