@@ -99,6 +99,8 @@ private:
   unsigned char tempOAM[0x20]; // Temporary OAM, holds the data for the sprites on the currently-rendering scanline. Should be filled by a sprite evaluation function executed during the previous scanline.
   int spritesOnThisScanline;
   int Sprite[8];
+  bool SpriteExists[8];
   bool SpriteZeroOnThisScanline;
+  void RenderSprites(int Scanline,int Pixel);
   //int HexColours[] = {0x7C7C7C,0x0000FC,0x0000BC,0x4428BC,0x940084,0xA80020,0x81000,0x881400,0x503000,0x007800,0x006800,0x005800,0x004058,0x0,0x0,0x0};
 };

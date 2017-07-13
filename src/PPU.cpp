@@ -156,6 +156,9 @@ void PPU::Execute(float PPUClock) {
       if (PixelOffset > 7)
         PixelOffset = 0;
 
+      // Render the sprites for this scanline
+      RenderSprites(CurrentScanline,Pixel);
+
       // Evaluate sprites for the next scanline at cycle 256
         if (CurrentCycle == 256)
           EvaluateSprites(CurrentScanline+1);
@@ -202,6 +205,25 @@ void PPU::Execute(float PPUClock) {
   }
 
   PPUClocks = 0;
+}
+
+void PPU::RenderSprites(int Scanline, int Pixel) {
+  // Check if any sprites need to be rendered on this pixel. if so, render them...
+  int count = 7;
+
+  while (count >= 0) {
+    // Figure out if a sprite is on this pixel (if it exists in OAM too)
+    if (SpriteExists[count]) {
+      // The sprite exists on this scanline if this check passed
+      if (Pixel >= tempOAM[Sprite[count]+3] && Pixel < tempOAM[Sprite[count]+3]+8)
+      {
+        // For now, render a solid colour where part of a sprite should be rendered
+        DrawPixel(0x0,Scanline,Pixel);
+      }
+    }
+    count--;
+  }
+
 }
 
 void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline) {
@@ -327,7 +349,7 @@ unsigned char PPU::NB() {
 unsigned char PPU::ReadNametableByte(int Pixel, int Scanline) {
   // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
   // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
-	// Should be called once per tile (so 33 times per scanline) or every 8 pixels
+	// Should be called once per tile (so 32 times per scanline) or every 8 pixels
 	int TileX = (Pixel / 8);
 	int TileY = (Scanline / 8) * 32;
 	int CurrentpxLine;
@@ -678,15 +700,21 @@ void PPU::EvaluateSprites(int Scanline) {
     tempOAM[i] = 0;
 
   // Clear the sprite render units
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < 8; i++) {
     Sprite[i] = 0;
+    SpriteExists[i] = false;
+  }
 
   for (int i = 0; i<64;i++) {
     // If the y position of the sprite matches the next scanline, add it to tempOAM
+
+    // Pixel >= tempOAM[Sprite[count]+3] && Pixel < tempOAM[Sprite[count]+3]+8
+
     if (spritesOnThisScanline < 8) {
 
     int SpriteLocation = i*4; // The location in memory of the sprite data
-    if ((OAM[SpriteLocation] <= (Scanline+7)) && (OAM[SpriteLocation] >= (Scanline))) {
+    //if ((OAM[SpriteLocation] <= (Scanline+7)) && (OAM[SpriteLocation] >= (Scanline))) {
+    if (Scanline >= OAM[SpriteLocation] && Scanline < (OAM[SpriteLocation]+8)) {
       tempOAM[(spritesOnThisScanline*4)] = OAM[SpriteLocation];
       tempOAM[(spritesOnThisScanline*4)+1] = OAM[SpriteLocation+1];
       tempOAM[(spritesOnThisScanline*4)+2] = OAM[SpriteLocation+2];
@@ -698,7 +726,8 @@ void PPU::EvaluateSprites(int Scanline) {
         SpriteZeroOnThisScanline = true;
 
       // Assign this sprite to a sprite output unit
-      Sprite[spritesOnThisScanline] = SpriteLocation;
+      Sprite[spritesOnThisScanline] = (spritesOnThisScanline*4);
+      SpriteExists[spritesOnThisScanline] = true;
 
       spritesOnThisScanline++;
     }
