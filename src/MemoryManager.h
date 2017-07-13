@@ -24,10 +24,12 @@ public:
 	bool CheckIRQ();
 	bool CheckNMI();
 	Cartridge *mainCartridge;
+	bool WriteDMA;
 private:
 	unsigned char MainMemory[0xFFFF];
 	void WriteRAM(unsigned short Location, unsigned char Value);
 	void WriteCartridge(unsigned short Location, unsigned char Value);
+	void OAMDMA(unsigned char Location);
 	unsigned short WrapMemory(unsigned short Location, unsigned short WrapValue);
 	unsigned char ReadCartridge(unsigned short Location);
 	unsigned char ReadPPU(unsigned short Location);

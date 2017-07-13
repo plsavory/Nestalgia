@@ -36,6 +36,8 @@ public:
   unsigned char ReadCROM(unsigned short Location);
   bool CHRRAM;
   int NametableMirrorMode;
+  void WriteOAM(unsigned short Location, unsigned char value);
+  unsigned char OAMAddress;
 private:
   int PPUClocks;
   int TileCounter;
@@ -57,7 +59,6 @@ private:
   void SelectOAMAddress(unsigned char value);
   int AddressSelectCounter;
   unsigned char DataAddresses[1];
-  unsigned char OAMAddress;
   unsigned short db; // Internal data bus register
   unsigned short idb;
   unsigned char finex; // Finex register (Contains currently drawing pixel)
@@ -67,7 +68,6 @@ private:
   Nametable Nametables[3]; // PPU has 4 nametables.
   unsigned char PaletteMemory[0x1F]; // Memory for storing colour palette information
   void WriteMemory(unsigned short Location, unsigned char value);
-  void WriteOAM(unsigned short Location, unsigned char value);
   void WriteOAM(unsigned char value);
   unsigned char ReadMemory(unsigned short Location);
   void WriteNametable(unsigned short Location,unsigned char Value);
@@ -81,6 +81,7 @@ private:
   unsigned char ReadPatternTable(unsigned short Location);
   void DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline);
   unsigned char ReadPalette(unsigned short Location);
+  void EvaluateSprites(int Scanline); // Fill tempOAM with the sprite data for the next scanline
   void WritePalette(unsigned short Location,unsigned char Value);
   void SetDataBus(int Scanline, int Pixel);
   int PixelOffset;
@@ -95,5 +96,9 @@ private:
   unsigned char cROM[0x80000]; // 512KiB max - PPU has its own memory for CHR data, this will be copied over from the MemoryManager's cartridge upon ROM load
   int frame = 0;
   int OldAttribute;
+  unsigned char tempOAM[0x20]; // Temporary OAM, holds the data for the sprites on the currently-rendering scanline. Should be filled by a sprite evaluation function executed during the previous scanline.
+  int spritesOnThisScanline;
+  int Sprite[8];
+  bool SpriteZeroOnThisScanline;
   //int HexColours[] = {0x7C7C7C,0x0000FC,0x0000BC,0x4428BC,0x940084,0xA80020,0x81000,0x881400,0x503000,0x007800,0x006800,0x005800,0x004058,0x0,0x0,0x0};
 };

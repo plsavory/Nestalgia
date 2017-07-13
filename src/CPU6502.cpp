@@ -330,6 +330,13 @@ int CPU6502::Execute()
 		//PrintCPUStatus(InstName(currentInst));
 	#endif
 
+	// Check if the CPU needs to be halted for 513 cycles because of DMA writes
+	if (mainMemory->WriteDMA) {
+		CyclesTaken = 513;
+		mainMemory->WriteDMA = false;
+		return CyclesTaken;
+	}
+
 	// Handle interrupts if neccesary
 	CheckInterrupts();
 

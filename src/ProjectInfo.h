@@ -1,5 +1,5 @@
 #define PROJECT_NAME "LegacyNES"
-#define PROJECT_VERSION "v0.1.0"
+#define PROJECT_VERSION "v0.1.1"
 
 
 

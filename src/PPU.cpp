@@ -22,6 +22,15 @@ PPU::PPU() {
   NMI_Fired = false;
   OldAttribute = 0;
   OAMAddress = 0;
+
+  // Clear the temporary OAM
+  for (int i = 0; i <0x20;i++)
+    tempOAM[i] = 0;
+
+  // Clear the sprite render units
+  for (int i = 0; i < 8; i++)
+    Sprite[i] = 0;
+
 }
 
 bool PPU::GetBit(int bit, unsigned char value)
@@ -107,7 +116,7 @@ void PPU::Execute(float PPUClock) {
       if (CurrentCycle == 0)
         finex = 7; // Reset finex on the idle scanline
 
-      if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240) {
+      if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240 && CurrentScanline >= 0) {
 
       //if ((Pixel & 7) == 0) {
       if (finex==7) {
@@ -147,7 +156,9 @@ void PPU::Execute(float PPUClock) {
       if (PixelOffset > 7)
         PixelOffset = 0;
 
-
+      // Evaluate sprites for the next scanline at cycle 256
+        if (CurrentCycle == 256)
+          EvaluateSprites(CurrentScanline+1);
     }
 
     // Handle switching to the next scanline here
@@ -654,6 +665,51 @@ unsigned char PPU::ReadAttribute(int Pixel, int Scanline, int Nametable) {
   unsigned char tempstore2 = (Attribute >> (tempstore1*2)) & 0x3;
 
   return tempstore2;
+
+}
+
+void PPU::EvaluateSprites(int Scanline) {
+  // Fill tempOAM with the data for the sprites on this scanline
+  spritesOnThisScanline = 0;
+  SpriteZeroOnThisScanline = false;
+
+  // Clear the temporary OAM
+  for (int i = 0; i <0x20;i++)
+    tempOAM[i] = 0;
+
+  // Clear the sprite render units
+  for (int i = 0; i < 8; i++)
+    Sprite[i] = 0;
+
+  for (int i = 0; i<64;i++) {
+    // If the y position of the sprite matches the next scanline, add it to tempOAM
+    if (spritesOnThisScanline < 8) {
+
+    int SpriteLocation = i*4; // The location in memory of the sprite data
+    if ((OAM[SpriteLocation] <= (Scanline+7)) && (OAM[SpriteLocation] >= (Scanline))) {
+      tempOAM[(spritesOnThisScanline*4)] = OAM[SpriteLocation];
+      tempOAM[(spritesOnThisScanline*4)+1] = OAM[SpriteLocation+1];
+      tempOAM[(spritesOnThisScanline*4)+2] = OAM[SpriteLocation+2];
+      tempOAM[(spritesOnThisScanline*4)+3] = OAM[SpriteLocation+3];
+
+
+      // If sprite zero is on this scanline, set the internal flag to true
+      if (SpriteLocation == 0)
+        SpriteZeroOnThisScanline = true;
+
+      // Assign this sprite to a sprite output unit
+      Sprite[spritesOnThisScanline] = SpriteLocation;
+
+      spritesOnThisScanline++;
+    }
+  } else {
+    // If we have reached here, a sprite overflow has occured - so set the appropriate flag in the PPU's registers to alert the emulated CPU of this
+  }
+
+}
+
+  // Fill the "sprite output units" to point to this data
+
 
 }
 
