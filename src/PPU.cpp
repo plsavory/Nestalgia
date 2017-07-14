@@ -721,6 +721,23 @@ void PPU::EvaluateSprites(int Scanline) {
       SpriteBitmapLo[spritesOnThisScanline] = ReadPatternTable(TileID+bitmapline,1);
       SpriteBitmapHi[spritesOnThisScanline] = ReadPatternTable(8+TileID+bitmapline,1);
 
+      // Handle sprite attributes...
+
+      // Handle horizontal mirroring
+      if (GetBit(6,tempOAM[(spritesOnThisScanline*4)+2])) {
+
+        unsigned char tmp1 = 0;
+        unsigned char tmp2 = 0;
+
+        for (int i=0;i<8;i++) {
+          tmp1 |= ((SpriteBitmapLo[spritesOnThisScanline]>>i)&1)<<(7-i);
+          tmp2 |= ((SpriteBitmapHi[spritesOnThisScanline]>>i)&1)<<(7-i);
+        }
+
+        SpriteBitmapLo[spritesOnThisScanline] = tmp1;
+        SpriteBitmapHi[spritesOnThisScanline] = tmp2;
+
+      }
       spritesOnThisScanline++;
     }
   } else {
