@@ -716,12 +716,14 @@ void PPU::EvaluateSprites(int Scanline) {
       int TileID = ((tempOAM[(spritesOnThisScanline*4)+1]))*16;// >> 1)<<1)*16; // Discard the least significant bit as we just extracted it above.
 
       int bitmapline = (Scanline-tempOAM[spritesOnThisScanline*4])&7;
-      //std::cout<<(int)bitmapline<<std::endl;
 
+      // If vertical mirroring is enabled, fetch bytes in reverse from normal
+      if (GetBit(7,tempOAM[(spritesOnThisScanline*4)+2]))
+        bitmapline = (~bitmapline)&7;
+
+      // Fetch the bitmap data for the sprite
       SpriteBitmapLo[spritesOnThisScanline] = ReadPatternTable(TileID+bitmapline,1);
       SpriteBitmapHi[spritesOnThisScanline] = ReadPatternTable(8+TileID+bitmapline,1);
-
-      // Handle sprite attributes...
 
       // Handle horizontal mirroring
       if (GetBit(6,tempOAM[(spritesOnThisScanline*4)+2])) {
@@ -738,6 +740,9 @@ void PPU::EvaluateSprites(int Scanline) {
         SpriteBitmapHi[spritesOnThisScanline] = tmp2;
 
       }
+
+    
+
       spritesOnThisScanline++;
     }
   } else {
