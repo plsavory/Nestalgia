@@ -713,9 +713,10 @@ void PPU::EvaluateSprites(int Scanline) {
       if (GetBit(3,Registers[0]))
         TileBank = 0x1000; // Selection of the pattern table to use is done by writing to bit 3 of PPUCTRL register
 
-      unsigned char TileID = (tempOAM[(spritesOnThisScanline*4)+1]);// >> 1)<<1; // Discard the least significant bit as we just extracted it above.
+      int TileID = ((tempOAM[(spritesOnThisScanline*4)+1]))*16;// >> 1)<<1)*16; // Discard the least significant bit as we just extracted it above.
 
       int bitmapline = (Scanline-tempOAM[spritesOnThisScanline*4])&7;
+      //std::cout<<(int)bitmapline<<std::endl;
 
       SpriteBitmapLo[spritesOnThisScanline] = ReadPatternTable(TileID+bitmapline,1);
       SpriteBitmapHi[spritesOnThisScanline] = ReadPatternTable(8+TileID+bitmapline,1);
