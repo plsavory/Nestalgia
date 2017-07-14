@@ -218,7 +218,15 @@ void PPU::RenderSprites(int Scanline, int Pixel) {
       if (Pixel >= tempOAM[Sprite[count]+3] && Pixel < tempOAM[Sprite[count]+3]+8)
       {
         // For now, render a solid colour where part of a sprite should be rendered
-        DrawPixel(0x0,Scanline,Pixel);
+
+        bool bitlo = GetBit(7,SpriteBitmapLo[count]);
+        bool bithi = GetBit(7,SpriteBitmapHi[count]);
+
+        DrawBitmapPixel(bitlo,bithi,Pixel,Scanline);
+
+        // Bit-shift the bitmap to the next pixel
+        SpriteBitmapHi[count]<<=1;
+        SpriteBitmapLo[count]<<=1;
       }
     }
     count--;
@@ -423,8 +431,8 @@ unsigned char PPU::ReadNametableByteb(unsigned short databus) {
 void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
       // This assumes that the "Pixel" number is bit shifted with each line
       // Fetch a pixel of character data from CHR and render it
-      unsigned short Lo = PPU::ReadPatternTable(ID)<<CurrentCycle;
-      unsigned short Hi = PPU::ReadPatternTable(8+ID)<<CurrentCycle;
+      unsigned short Lo = ReadPatternTable(ID)<<CurrentCycle;
+      unsigned short Hi = ReadPatternTable(8+ID)<<CurrentCycle;
 
       // Draw a pixel on screen of temporary colour for now
       int PixelColour = GetBit(7,Lo);
@@ -729,6 +737,20 @@ void PPU::EvaluateSprites(int Scanline) {
       Sprite[spritesOnThisScanline] = (spritesOnThisScanline*4);
       SpriteExists[spritesOnThisScanline] = true;
 
+      // Fetch the bitmap data for this sprite
+      //int TileBank = GetBit(0,tempOAM[spritesOnThisScanline*4)+1]); - for 8x16 tiles which is not yet implemented
+      int TileBank = 0;
+
+      if (GetBit(3,Registers[0]))
+        TileBank = 0x1000; // Selection of the pattern table to use is done by writing to bit 3 of PPUCTRL register
+
+      unsigned char TileID = (tempOAM[(spritesOnThisScanline*4)+1]);// >> 1)<<1; // Discard the least significant bit as we just extracted it above.
+
+      int bitmapline = (Scanline-tempOAM[spritesOnThisScanline*4])&7;
+
+      SpriteBitmapLo[spritesOnThisScanline] = cROM[TileBank+(TileID+bitmapline)];
+      SpriteBitmapHi[spritesOnThisScanline] = cROM[TileBank+(8+TileID+bitmapline)];
+
       spritesOnThisScanline++;
     }
   } else {
@@ -736,9 +758,6 @@ void PPU::EvaluateSprites(int Scanline) {
   }
 
 }
-
-  // Fill the "sprite output units" to point to this data
-
 
 }
 
