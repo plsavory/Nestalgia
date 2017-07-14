@@ -78,7 +78,7 @@ private:
   void ReadColour(int Attribute,int col);
   void DisplayNametableID(unsigned char ID,int Pixel,int Scanline);
   void RenderTilePixel(unsigned char ID, int Pixel, int Scanline);
-  unsigned char ReadPatternTable(unsigned short Location);
+  unsigned char ReadPatternTable(unsigned short Location, int PatternType);
   void DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline);
   unsigned char ReadPalette(unsigned short Location);
   void EvaluateSprites(int Scanline); // Fill tempOAM with the sprite data for the next scanline

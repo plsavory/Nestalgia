@@ -354,39 +354,6 @@ unsigned char PPU::NB() {
   return db;
 }
 
-unsigned char PPU::ReadNametableByte(int Pixel, int Scanline) {
-  // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
-  // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
-	// Should be called once per tile (so 32 times per scanline) or every 8 pixels
-	int TileX = (Pixel / 8);
-	int TileY = (Scanline / 8) * 32;
-	int CurrentpxLine;
-
-	if (Scanline > 7)
-		//CurrentpxLine = (((Scanline/8) - 1) * 8) - Scanline;
-    CurrentpxLine = Scanline & 7;
-	else
-		CurrentpxLine = Scanline;
-
-/*
-  if (Scanline >= 0 && Scanline <= 256) {
-   std::cout<<"Current Scanline:"<<std::dec<<(int)Scanline<< " ";
-	 std::cout<<"Current Line of tile: " <<std::dec<< (int)CurrentpxLine << std::endl;
- }
- */
-	// Get the ID of the bitmap data for target nametable entry
-
-	unsigned char data = Nametables[0].Data[TileX + TileY];
-  int PatternOffset = 0;
-
-  int PatternToRead = (data)*16;
-
-	// Fill the bitmap shift registers with the CHR data for this tile
-	bitmapLo = ReadPatternTable(PatternOffset+(PatternToRead+CurrentpxLine));
-	bitmapHi = ReadPatternTable(PatternOffset+(8+PatternToRead+CurrentpxLine));
-
-	return data;
-}
 
 void PPU::SetDataBus(int Scanline, int Pixel) {
   // Returns the location in memory of the requested nametable entry
@@ -421,8 +388,8 @@ unsigned char PPU::ReadNametableByteb(unsigned short databus) {
   int PatternToRead = (data)*16;
 
 	// Fill the bitmap shift registers with the CHR data for this tile
-	bitmapLo = ReadPatternTable(PatternOffset+(PatternToRead+bitmapline));
-	bitmapHi = ReadPatternTable(PatternOffset+(8+PatternToRead+bitmapline));
+	bitmapLo = ReadPatternTable(PatternOffset+(PatternToRead+bitmapline),0);
+	bitmapHi = ReadPatternTable(PatternOffset+(8+PatternToRead+bitmapline),0);
   //std::cout<<(int)finey<<std::endl;
 
 	return data;
@@ -431,8 +398,8 @@ unsigned char PPU::ReadNametableByteb(unsigned short databus) {
 void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
       // This assumes that the "Pixel" number is bit shifted with each line
       // Fetch a pixel of character data from CHR and render it
-      unsigned short Lo = ReadPatternTable(ID)<<CurrentCycle;
-      unsigned short Hi = ReadPatternTable(8+ID)<<CurrentCycle;
+      unsigned short Lo = ReadPatternTable(ID,0)<<CurrentCycle;
+      unsigned short Hi = ReadPatternTable(8+ID,0)<<CurrentCycle;
 
       // Draw a pixel on screen of temporary colour for now
       int PixelColour = GetBit(7,Lo);
@@ -440,11 +407,13 @@ void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
 
 }
 
-unsigned char PPU::ReadPatternTable(unsigned short Location) {
+unsigned char PPU::ReadPatternTable(unsigned short Location, int PatternType) {
+  // Pattern type 0 = Background, 1 = Sprites
+
   // Add more logic to this later for handling mappers
   unsigned short offset = 0x0;
 
-  if (GetBit(4,Registers[0]))
+  if (GetBit((4-PatternType),Registers[0]))
     offset = 0x1000;
   return cROM[offset+Location];
 }
@@ -748,8 +717,8 @@ void PPU::EvaluateSprites(int Scanline) {
 
       int bitmapline = (Scanline-tempOAM[spritesOnThisScanline*4])&7;
 
-      SpriteBitmapLo[spritesOnThisScanline] = cROM[TileBank+(TileID+bitmapline)];
-      SpriteBitmapHi[spritesOnThisScanline] = cROM[TileBank+(8+TileID+bitmapline)];
+      SpriteBitmapLo[spritesOnThisScanline] = ReadPatternTable(TileID+bitmapline,1);
+      SpriteBitmapHi[spritesOnThisScanline] = ReadPatternTable(8+TileID+bitmapline,1);
 
       spritesOnThisScanline++;
     }
