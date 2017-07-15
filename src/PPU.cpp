@@ -715,7 +715,7 @@ void PPU::EvaluateSprites(int Scanline) {
     if (spritesOnThisScanline < 8) {
 
     int SpriteLocation = i*4; // The location in memory of the sprite data
-    //if ((OAM[SpriteLocation] <= (Scanline+7)) && (OAM[SpriteLocation] >= (Scanline))) {
+
     if (Scanline >= OAM[SpriteLocation] && Scanline < (OAM[SpriteLocation]+8)) {
       tempOAM[(spritesOnThisScanline*4)] = OAM[SpriteLocation];
       tempOAM[(spritesOnThisScanline*4)+1] = OAM[SpriteLocation+1];
@@ -767,7 +767,7 @@ void PPU::EvaluateSprites(int Scanline) {
       }
 
       // Figure out which colour palette the sprite is supposed to use, and store it.
-      int Attribute = GetBit(0,tempOAM[(spritesOnThisScanline*4)+2]) + (GetBit(1,tempOAM[(spritesOnThisScanline*4)+2]) << 1)+4;
+      int Attribute = ((GetBit(0,tempOAM[(spritesOnThisScanline*4)+2])) + (GetBit(1,tempOAM[(spritesOnThisScanline*4)+2]) << 1)+4);
       ReadColour(Attribute,spritesOnThisScanline);
 
       spritesOnThisScanline++;
@@ -791,21 +791,6 @@ void PPU::ReadColour(int Attribute) {
 
 void PPU::ReadColour(int Attribute,int Sprite) {
   int Location = 0x3F01+(Attribute*4);
-
-  switch (Attribute) {
-    case 0:
-      Location = 0x3F01;
-    break;
-    case 1:
-      Location = 0x3F05;
-    break;
-    case 2:
-      Location = 0x3F09;
-    break;
-    case 3:
-      Location = 0x3F0D;
-    break;
-  }
 
   SpritePalette[Sprite].Colours[0] = ReadPalette(Location);
   SpritePalette[Sprite].Colours[1] = ReadPalette(Location+1);
