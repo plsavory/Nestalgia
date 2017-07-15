@@ -143,7 +143,7 @@ void PPU::Execute(float PPUClock) {
       // Read an attribute byte for it to display
       currentAttribute = ReadAttribute(Pixel,CurrentScanline,0); // For now just read from the first attribute table to make sure things are working
 
-      ReadColour(currentAttribute,0);
+      ReadColour(currentAttribute);
       DrawBitmapPixel(lo,hi,Pixel,CurrentScanline);
 
       // Bit shift the bitmap for the next pixel
@@ -222,7 +222,7 @@ void PPU::RenderSprites(int Scanline, int Pixel) {
         bool bitlo = GetBit(7,SpriteBitmapLo[count]);
         bool bithi = GetBit(7,SpriteBitmapHi[count]);
 
-        DrawBitmapPixel(bitlo,bithi,Pixel,Scanline);
+        DrawBitmapPixel(bitlo,bithi,Pixel,Scanline,count);
 
         // Bit-shift the bitmap to the next pixel
         SpriteBitmapHi[count]<<=1;
@@ -252,6 +252,31 @@ void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline) {
     break;
     case 3:
       col = currentPalette.Colours[2];
+      //col = 0x1;
+    break;
+  }
+
+  DrawPixel(col,Scanline,Pixel);
+}
+
+void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline,int Sprite) {
+  int pixelvalue = (lo + (hi << 1));
+  unsigned char col = 0x0;
+  switch (pixelvalue)
+  {
+    case 0:
+      col = ReadPalette(0x3F00);
+    break;
+      case 1:
+      col = SpritePalette[Sprite].Colours[0];
+      //col = 0x24;
+    break;
+    case 2:
+      col = SpritePalette[Sprite].Colours[1];
+    //col = 0x1B;
+    break;
+    case 3:
+      col = SpritePalette[Sprite].Colours[2];
       //col = 0x1;
     break;
   }
@@ -741,7 +766,9 @@ void PPU::EvaluateSprites(int Scanline) {
 
       }
 
-    
+      // Figure out which colour palette the sprite is supposed to use, and store it.
+      int Attribute = GetBit(0,tempOAM[(spritesOnThisScanline*4)+2]) + (GetBit(1,tempOAM[(spritesOnThisScanline*4)+2]) << 1)+4;
+      ReadColour(Attribute,spritesOnThisScanline);
 
       spritesOnThisScanline++;
     }
@@ -753,7 +780,16 @@ void PPU::EvaluateSprites(int Scanline) {
 
 }
 
-void PPU::ReadColour(int Attribute,int col) {
+void PPU::ReadColour(int Attribute) {
+  int Location = 0x3F01+(Attribute*4);
+
+  currentPalette.Colours[0] = ReadPalette(Location);
+  currentPalette.Colours[1] = ReadPalette(Location+1);
+  currentPalette.Colours[2] = ReadPalette(Location+2);
+
+}
+
+void PPU::ReadColour(int Attribute,int Sprite) {
   int Location = 0x3F01+(Attribute*4);
 
   switch (Attribute) {
@@ -771,9 +807,9 @@ void PPU::ReadColour(int Attribute,int col) {
     break;
   }
 
-  currentPalette.Colours[0] = ReadPalette(Location);
-  currentPalette.Colours[1] = ReadPalette(Location+1);
-  currentPalette.Colours[2] = ReadPalette(Location+2);
+  SpritePalette[Sprite].Colours[0] = ReadPalette(Location);
+  SpritePalette[Sprite].Colours[1] = ReadPalette(Location+1);
+  SpritePalette[Sprite].Colours[2] = ReadPalette(Location+2);
 
 }
 

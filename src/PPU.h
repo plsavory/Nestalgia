@@ -75,11 +75,13 @@ private:
   unsigned char ReadNametableByte(int Pixel, int Scanline);
   unsigned char ReadNametableByteb(unsigned short databus);
   unsigned char ReadAttribute(int Pixel, int Scanline,int Nametable);
-  void ReadColour(int Attribute,int col);
+  void ReadColour(int Attribute);
+  void ReadColour(int Attribute, int Sprite);
   void DisplayNametableID(unsigned char ID,int Pixel,int Scanline);
   void RenderTilePixel(unsigned char ID, int Pixel, int Scanline);
   unsigned char ReadPatternTable(unsigned short Location, int PatternType);
   void DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline);
+  void DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline,int Sprite);
   unsigned char ReadPalette(unsigned short Location);
   void EvaluateSprites(int Scanline); // Fill tempOAM with the sprite data for the next scanline
   void WritePalette(unsigned short Location,unsigned char Value);
