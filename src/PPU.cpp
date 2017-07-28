@@ -146,10 +146,6 @@ void PPU::Execute(float PPUClock) {
       ReadColour(currentAttribute);
       DrawBitmapPixel(lo,hi,Pixel,CurrentScanline);
 
-      // Bit shift the bitmap for the next pixel
-      //bitmapLo = (bitmapLo<<1);
-      //bitmapHi = (bitmapHi<<1);
-
       PixelOffset++; // The pixel offset of the current tile
 
       // Reset the pixel counter if it goes above 7 as we'll need to fetch the next tile soon
@@ -281,11 +277,13 @@ void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline,int Sprite) {
     break;
   }
 
-  DrawPixel(col,Scanline,Pixel);
+  // Render the pixel (if it is not a transparent pixel)
+  if (col != ReadPalette(0x3F00))
+    DrawPixel(col,Scanline,Pixel);
 }
 
 void PPU::DrawPixel(unsigned char value, int Scanline, int Pixel) {
-  NESPixels[(Scanline*256)+Pixel-1] = value; // Scanline 0 is an idle scanline, so -1 so we don't overflow the pixel space here (so that pixel 256 actually appears on the right hand side)
+  NESPixels[(Scanline*256)+Pixel] = value; // Scanline 0 is an idle scanline, so -1 so we don't overflow the pixel space here (so that pixel 256 actually appears on the right hand side)
 }
 
 void PPU::DrawPixelTest(unsigned char value, int Scanline, int Pixel, unsigned char ID) {
@@ -705,6 +703,9 @@ void PPU::EvaluateSprites(int Scanline) {
   for (int i = 0; i < 8; i++) {
     Sprite[i] = 0;
     SpriteExists[i] = false;
+    SpritePalette[i].Colours[0] = 0;
+    SpritePalette[i].Colours[1] = 0;
+    SpritePalette[i].Colours[2] = 0;
   }
 
   for (int i = 0; i<64;i++) {
@@ -767,7 +768,9 @@ void PPU::EvaluateSprites(int Scanline) {
       }
 
       // Figure out which colour palette the sprite is supposed to use, and store it.
-      int Attribute = ((GetBit(0,tempOAM[(spritesOnThisScanline*4)+2])) + (GetBit(1,tempOAM[(spritesOnThisScanline*4)+2]) << 1)+4);
+      int AttributeLo = GetBit(0,tempOAM[(spritesOnThisScanline*4)+2]);
+      int AttributeHi = GetBit(1,tempOAM[(spritesOnThisScanline*4)+2]) << 1;
+      int Attribute = (AttributeHi+AttributeLo)+4;
       ReadColour(Attribute,spritesOnThisScanline);
 
       spritesOnThisScanline++;
