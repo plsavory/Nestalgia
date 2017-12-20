@@ -522,7 +522,7 @@ void MemoryManager::OAMDMA(unsigned char Location) {
 	// Writes all 256 bytes within the given main memory page to the PPU's object attribute memory. The CPU should be halted for 513 CPU cycles.
 	unsigned short MemLocation = Location<<8; // Location gives the high byte of a memory page
 
-	for (int i = 0; i<0xFF;i++) {
+	for (int i = 0; i<=0xFF;i++) {
 		// Copy each one of the 256 bytes into the PPU's OAM array
 		unsigned char writelocation = i+mainPPU->OAMAddress;
 		mainPPU->WriteOAM(writelocation,ReadMemory(MemLocation));

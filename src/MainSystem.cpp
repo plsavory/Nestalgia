@@ -30,7 +30,7 @@ void MainSystem::Execute() {
   // CPU Clock: Master/12 (NTSC), Master/16 (PAL)
   // Only NTSC is supported right now - will add PAL timings in future.
   const double MasterClocksPerFrame = 21477272/60;
-  int ClocksThisFrame;
+  int ClocksThisFrame = 0;
 
   // Update to current controller input
   if (Focused)

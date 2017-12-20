@@ -18,6 +18,25 @@ struct Palette {
   unsigned char Colours[2];
 };
 
+struct SpriteUnit {
+public:
+	SpriteUnit() {
+		palette.Colours[0] = 0;
+		palette.Colours[1] = 0;
+		palette.Colours[2] = 0;
+		bitmapLo = 0;
+		bitmapHi = 0;
+		XPos = 0;
+		YPos = 0;
+	}
+	Palette palette;
+	bool padding; // This is required to be here or the bitmapLo variable becomes corrupted - need to look at this in case we are writing out of the array's bounds somewhere
+	unsigned char bitmapLo;
+	unsigned char bitmapHi;
+	unsigned char XPos;
+	unsigned char YPos;
+};
+
 class PPU {
 
 public:
@@ -39,6 +58,7 @@ public:
   void WriteOAM(unsigned short Location, unsigned char value);
   unsigned char OAMAddress;
 private:
+	SpriteUnit * spriteUnits[8];
   int PPUClocks;
   int TileCounter;
   int CurrentCycle;
@@ -101,10 +121,7 @@ private:
   unsigned char tempOAM[0x20]; // Temporary OAM, holds the data for the sprites on the currently-rendering scanline. Should be filled by a sprite evaluation function executed during the previous scanline.
   int spritesOnThisScanline;
   int Sprite[8];
-  unsigned char SpriteBitmapLo[8];
-  unsigned char SpriteBitmapHi[8];
   bool SpriteExists[8];
-  Palette SpritePalette[8];
   bool SpriteZeroOnThisScanline;
   void RenderSprites(int Scanline,int Pixel);
   //int HexColours[] = {0x7C7C7C,0x0000FC,0x0000BC,0x4428BC,0x940084,0xA80020,0x81000,0x881400,0x503000,0x007800,0x006800,0x005800,0x004058,0x0,0x0,0x0};

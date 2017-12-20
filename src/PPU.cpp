@@ -31,6 +31,10 @@ PPU::PPU() {
   for (int i = 0; i < 8; i++)
     Sprite[i] = 0;
 
+  // Create the sprite render units
+  for (int i = 0; i < 8; i++)
+	spriteUnits[i] = new SpriteUnit();
+
 }
 
 bool PPU::GetBit(int bit, unsigned char value)
@@ -211,18 +215,17 @@ void PPU::RenderSprites(int Scanline, int Pixel) {
     // Figure out if a sprite is on this pixel (if it exists in OAM too)
     if (SpriteExists[count]) {
       // The sprite exists on this scanline if this check passed
-      if (Pixel >= tempOAM[Sprite[count]+3] && Pixel < tempOAM[Sprite[count]+3]+8)
+      if (Pixel >= spriteUnits[count]->XPos && Pixel < spriteUnits[count]->XPos+8)
       {
-        // For now, render a solid colour where part of a sprite should be rendered
-
-        bool bitlo = GetBit(7,SpriteBitmapLo[count]);
-        bool bithi = GetBit(7,SpriteBitmapHi[count]);
+        // Render the bit of the the sprite's bitmap data for this pixel
+        bool bitlo = GetBit(7,spriteUnits[count]->bitmapLo);
+		bool bithi = GetBit(7,spriteUnits[count]->bitmapHi);
 
         DrawBitmapPixel(bitlo,bithi,Pixel,Scanline,count);
 
         // Bit-shift the bitmap to the next pixel
-        SpriteBitmapHi[count]<<=1;
-        SpriteBitmapLo[count]<<=1;
+        spriteUnits[count]->bitmapHi<<=1;
+        spriteUnits[count]->bitmapLo<<=1;
       }
     }
     count--;
@@ -257,29 +260,11 @@ void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline) {
 
 void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline,int Sprite) {
   int pixelvalue = (lo + (hi << 1));
-  unsigned char col = 0x0;
-  switch (pixelvalue)
-  {
-    case 0:
-      col = ReadPalette(0x3F00);
-    break;
-      case 1:
-      col = SpritePalette[Sprite].Colours[0];
-      //col = 0x24;
-    break;
-    case 2:
-      col = SpritePalette[Sprite].Colours[1];
-    //col = 0x1B;
-    break;
-    case 3:
-      col = SpritePalette[Sprite].Colours[2];
-      //col = 0x1;
-    break;
-  }
 
-  // Render the pixel (if it is not a transparent pixel)
-  if (col != ReadPalette(0x3F00))
-    DrawPixel(col,Scanline,Pixel);
+  if (pixelvalue != 0) {
+	  unsigned char col = spriteUnits[Sprite]->palette.Colours[pixelvalue-1]; //SpritePalette[Sprite].Colours[pixelvalue - 1];
+	  DrawPixel(col, Scanline, Pixel);
+  }
 }
 
 void PPU::DrawPixel(unsigned char value, int Scanline, int Pixel) {
@@ -407,7 +392,7 @@ unsigned char PPU::ReadNametableByteb(unsigned short databus) {
 
 	// Should be called once per tile (so 33 times per scanline) or every 8 pixels
   unsigned char data = ReadNametable(0x2000+TileLocation);
-  int PatternOffset = 0;
+  unsigned short PatternOffset = 0;
   int PatternToRead = (data)*16;
 
 	// Fill the bitmap shift registers with the CHR data for this tile
@@ -703,9 +688,12 @@ void PPU::EvaluateSprites(int Scanline) {
   for (int i = 0; i < 8; i++) {
     Sprite[i] = 0;
     SpriteExists[i] = false;
-    SpritePalette[i].Colours[0] = 0;
-    SpritePalette[i].Colours[1] = 0;
-    SpritePalette[i].Colours[2] = 0;
+	spriteUnits[i]->bitmapHi = 0;
+	spriteUnits[i]->bitmapLo = 0;
+	spriteUnits[i]->palette.Colours[0] = 0;
+	spriteUnits[i]->palette.Colours[1] = 0;
+	spriteUnits[i]->palette.Colours[2] = 0;
+	spriteUnits[i]->XPos = 0;
   }
 
   for (int i = 0; i<64;i++) {
@@ -732,6 +720,9 @@ void PPU::EvaluateSprites(int Scanline) {
       Sprite[spritesOnThisScanline] = (spritesOnThisScanline*4);
       SpriteExists[spritesOnThisScanline] = true;
 
+	  // Get the sprite's X Position and store it
+	  spriteUnits[spritesOnThisScanline]->XPos = tempOAM[(spritesOnThisScanline * 4) + 3];
+
       // Fetch the bitmap data for this sprite
       //int TileBank = GetBit(0,tempOAM[spritesOnThisScanline*4)+1]); - for 8x16 tiles which is not yet implemented
       int TileBank = 0;
@@ -748,8 +739,8 @@ void PPU::EvaluateSprites(int Scanline) {
         bitmapline = (~bitmapline)&7;
 
       // Fetch the bitmap data for the sprite
-      SpriteBitmapLo[spritesOnThisScanline] = ReadPatternTable(TileID+bitmapline,1);
-      SpriteBitmapHi[spritesOnThisScanline] = ReadPatternTable(8+TileID+bitmapline,1);
+      spriteUnits[spritesOnThisScanline]->bitmapLo = ReadPatternTable(TileID+bitmapline,1);
+      spriteUnits[spritesOnThisScanline]->bitmapHi = ReadPatternTable(8+TileID+bitmapline,1);
 
       // Handle horizontal mirroring
       if (GetBit(6,tempOAM[(spritesOnThisScanline*4)+2])) {
@@ -758,19 +749,18 @@ void PPU::EvaluateSprites(int Scanline) {
         unsigned char tmp2 = 0;
 
         for (int i=0;i<8;i++) {
-          tmp1 |= ((SpriteBitmapLo[spritesOnThisScanline]>>i)&1)<<(7-i);
-          tmp2 |= ((SpriteBitmapHi[spritesOnThisScanline]>>i)&1)<<(7-i);
+          tmp1 |= ((spriteUnits[spritesOnThisScanline]->bitmapLo>>i)&1)<<(7-i);
+          tmp2 |= ((spriteUnits[spritesOnThisScanline]->bitmapHi>>i)&1)<<(7-i);
         }
 
-        SpriteBitmapLo[spritesOnThisScanline] = tmp1;
-        SpriteBitmapHi[spritesOnThisScanline] = tmp2;
+        spriteUnits[spritesOnThisScanline]->bitmapLo = tmp1;
+        spriteUnits[spritesOnThisScanline]->bitmapHi = tmp2;
 
       }
 
       // Figure out which colour palette the sprite is supposed to use, and store it.
-      int AttributeLo = GetBit(0,tempOAM[(spritesOnThisScanline*4)+2]);
-      int AttributeHi = GetBit(1,tempOAM[(spritesOnThisScanline*4)+2]) << 1;
-      int Attribute = (AttributeHi+AttributeLo)+4;
+      int Attribute = ((GetBit(0,tempOAM[(spritesOnThisScanline*4)+2])) + (GetBit(1,tempOAM[(spritesOnThisScanline*4)+2]) << 1)+4);
+
       ReadColour(Attribute,spritesOnThisScanline);
 
       spritesOnThisScanline++;
@@ -794,10 +784,10 @@ void PPU::ReadColour(int Attribute) {
 
 void PPU::ReadColour(int Attribute,int Sprite) {
   int Location = 0x3F01+(Attribute*4);
+  spriteUnits[Sprite]->palette.Colours[0] = ReadPalette(Location);
+  spriteUnits[Sprite]->palette.Colours[1] = ReadPalette(Location+1);
+  spriteUnits[Sprite]->palette.Colours[2] = ReadPalette(Location+2);
 
-  SpritePalette[Sprite].Colours[0] = ReadPalette(Location);
-  SpritePalette[Sprite].Colours[1] = ReadPalette(Location+1);
-  SpritePalette[Sprite].Colours[2] = ReadPalette(Location+2);
 
 }
 
