@@ -56,6 +56,7 @@ public:
   bool CHRRAM;
   int NametableMirrorMode;
   void WriteOAM(unsigned short Location, unsigned char value);
+  void WriteScroll(unsigned char value);
   unsigned char OAMAddress;
 private:
 	SpriteUnit * spriteUnits[8];
@@ -64,6 +65,8 @@ private:
   int CurrentCycle;
   int CurrentTile;
   int CurrentScanline;
+  unsigned char XScroll;
+  unsigned char YScroll;
   void RenderNametable(int Nametable, int OffsetX, int OffsetY);
   sf::Color GetColour(unsigned char NESColour);
   unsigned char *NESPixels;
@@ -78,6 +81,7 @@ private:
   void SelectAddress(unsigned char value);
   void SelectOAMAddress(unsigned char value);
   int AddressSelectCounter;
+  int ScrollLatchCounter;
   unsigned char DataAddresses[1];
   unsigned short db; // Internal data bus register
   unsigned short idb;
@@ -85,7 +89,8 @@ private:
   unsigned char finey;
   //unsigned char Memory[0x3FFF]; // main PPU memory (16kB)
   unsigned char OAM[256];
-  Nametable Nametables[3]; // PPU has 4 nametables.
+  Nametable Nametables[4]; // PPU has 4 nametables. (Extra one here for data padding - might need to look at later: Sprites get corrupted when writing to nametable 3 otherwise)
+  bool pad;
   unsigned char PaletteMemory[0x1F]; // Memory for storing colour palette information
   void WriteMemory(unsigned short Location, unsigned char value);
   void WriteOAM(unsigned char value);

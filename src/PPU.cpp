@@ -66,6 +66,9 @@ void PPU::Reset() {
   CurrentTile = 0;
   NMI_Fired = false; // If this is true, a NMI will be fired to the CPU
   AddressSelectCounter = 0;
+  ScrollLatchCounter = 0;
+  XScroll = 0;
+  YScroll = 0;
 
 
   // Initialize the buffers (Set real SFML draw area to grey for now)
@@ -122,20 +125,11 @@ void PPU::Execute(float PPUClock) {
 
       if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240 && CurrentScanline >= 0) {
 
-      //if ((Pixel & 7) == 0) {
       if (finex==7) {
-        //nametablebyte = ReadNametableByte(Pixel,CurrentScanline);
         SetDataBus(CurrentScanline,Pixel);
         nametablebyte = ReadNametableByteb(idb);
         idb++; // Increment the data bus to fetch the next tile
       }
-
-      //}
-
-      //if (CurrentScanline > 100)
-      //std::cout<<"PixelTick"<<std::endl;
-    //  if (nametablebyte != 0x0)
-        //DrawPixelTest(0x33,CurrentScanline,Pixel,nametablebyte);
 
       // Next need to draw the actual pixel bitmap
       bool lo = GetBit(finex,bitmapLo);
@@ -365,13 +359,19 @@ unsigned char PPU::NB() {
 
 void PPU::SetDataBus(int Scanline, int Pixel) {
   // Returns the location in memory of the requested nametable entry
-  int basenametable = GetBit(0,Registers[0]) + GetBit(1,Registers[0]);
-  idb = basenametable << 10; // Register layout is yyyNNYYYYYXXXXX
-  int coarsex = Scanline/8;
-  int coarsey = Pixel/8;
-  idb = idb+(coarsex << 5);
-  idb = idb+coarsey;
 
+	// Work out values from scroll register
+	unsigned short coarseyreg = (YScroll & 0xF8);
+	//std::cout << (int)coarseyreg << std::endl;
+	//unsigned short fineyreg = (YScroll >> 5) << 5;
+  unsigned short basenametable = GetBit(1,Registers[0]) + (GetBit(0, Registers[0])<<1);
+  //std::cout << basenametable << std::endl;
+  idb = (basenametable << 10) + (coarseyreg << 2); // Register layout is yyyNNYYYYYXXXXX
+  unsigned short coarsey = (Scanline/8);
+  unsigned short coarsex = Pixel/8;
+  idb = idb+(coarsey << 5);
+  idb = idb+(coarsex);
+  idb &= 0x7FFF;
   // Set the y position in the bitmap for this tile
   bitmapline = Scanline & 7;
 }
@@ -383,8 +383,8 @@ unsigned char PPU::ReadNametableByteb(unsigned short databus) {
   //databus&=0xFFFF; // In the unlikely case that the most significant bit is set, un set it as we want to discard it.
 
   // Ignore the top 3 bits of the data bus as this is relating to fine scroll (the MSB is not used as this is a 15-bit register)
-  unsigned short TileLocation = databus << 4;
-  TileLocation = TileLocation >> 4;
+	unsigned short TileLocation = databus;// << 4;
+  //TileLocation = TileLocation >> 4;
   //TileLocation+=0x2000;
 
   // Get the current fine Y scroll
@@ -463,6 +463,20 @@ void PPU::SelectAddress(unsigned char value) {
 
 }
 
+void PPU::WriteScroll(unsigned char value) {
+	// Is a latch - works like the above SelectAddress function.
+	if (AddressSelectCounter == 0) {
+		// Writing to X
+		XScroll = value;
+		AddressSelectCounter++;
+	}
+	else {
+		// Writing to Y
+		YScroll = value;
+		AddressSelectCounter = 0;
+	}
+}
+
 void PPU::SelectOAMAddress(unsigned char value) {
   OAMAddress = value;
 }
@@ -490,6 +504,7 @@ unsigned char PPU::ReadRegister(unsigned short Location) {
     AddressSelectCounter = 0; // Reading from the PPUADDR register means the CPU wants to reset the address writing.
     RetVal = Registers[2]; // We need to clear the vblank flag when this register is read, so store its previous state here
     Registers[2] = SetBit(7,0,Registers[2]); // Clear the vblank flag
+	ScrollLatchCounter = 0;
     return RetVal;
     case 0x7:
     return PPUDRead();
@@ -543,7 +558,7 @@ void PPU::WriteNametable(unsigned short Location,unsigned char Value) {
   #endif
 
   // Write the data to the Nametable
-  if (NametableMirrorMode == 1) {
+  if (NametableMirrorMode == 0) {
     // Vertical mirroring
     if (TargetNametable == 0 || TargetNametable == 1)
       {
@@ -557,7 +572,7 @@ void PPU::WriteNametable(unsigned short Location,unsigned char Value) {
       }
   }
 
-  if (NametableMirrorMode == 0) {
+  if (NametableMirrorMode == 1) {
     // Horizontal mirroring
     if (TargetNametable == 0 || TargetNametable == 2) {
       Nametables[0].Data[WriteLocation] = Value;
@@ -565,7 +580,7 @@ void PPU::WriteNametable(unsigned short Location,unsigned char Value) {
     } else
     {
       Nametables[1].Data[WriteLocation] = Value;
-      Nametables[2].Data[WriteLocation] = Value;
+      Nametables[3].Data[WriteLocation] = Value;
     }
   }
 
@@ -591,6 +606,10 @@ void PPU::WriteRegister(unsigned short Register,unsigned char value) {
       // Write to PPU OAM
       WriteOAM(value);
     break;
+	case 5:
+	  // Write to scroll register
+		WriteScroll(value);
+	break;
     case 6:
     SelectAddress(value); // PPU is writing to PPUDATA, so handle address selecting
     break;
