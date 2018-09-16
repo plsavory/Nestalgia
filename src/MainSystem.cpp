@@ -92,7 +92,7 @@ void MainSystem::Run()
   BuildString<<PROJECT_NAME<<" "<<PROJECT_VERSION<<PROJECT_OS<<PROJECT_ARCH<<" ";
 
   // Initialize the SFML system and pass the window handle on to the emulator object for further use.
-  sf::RenderWindow MainWindow(sf::VideoMode((256*3),(240*3)), "LegacyNES",sf::Style::Close);
+  sf::RenderWindow MainWindow(sf::VideoMode((256*3),(240*3)), "Nestalgia",sf::Style::Close);
   MainWindow.setFramerateLimit(60);
   MainWindow.setTitle(BuildString.str());
 
