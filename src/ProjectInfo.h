@@ -1,4 +1,4 @@
-#define PROJECT_NAME "LegacyNES"
+#define PROJECT_NAME "Nestalgia"
 #define PROJECT_VERSION "v0.1.2"
 
 
