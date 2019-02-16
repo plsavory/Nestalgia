@@ -80,10 +80,6 @@ void PPU::Reset() {
   for (int i = 0; i <= (256*262); i++)
     NESPixels[i] = 0x0;
 
-  // Zero-out the PPU's memory
-  //for (int i = 0; i < 0x3FFF;i++)
-    	//Memory[i] = 0x0;
-
   for (int i = 0; i <256;i++)
     	OAM[i] = 0x0;
 
@@ -122,20 +118,12 @@ void PPU::Execute(float PPUClock) {
 
       if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240 && CurrentScanline >= 0) {
 
-      //if ((Pixel & 7) == 0) {
       if (finex==7) {
         //nametablebyte = ReadNametableByte(Pixel,CurrentScanline);
         SetDataBus(CurrentScanline,Pixel);
         nametablebyte = ReadNametableByteb(idb);
         idb++; // Increment the data bus to fetch the next tile
       }
-
-      //}
-
-      //if (CurrentScanline > 100)
-      //std::cout<<"PixelTick"<<std::endl;
-    //  if (nametablebyte != 0x0)
-        //DrawPixelTest(0x33,CurrentScanline,Pixel,nametablebyte);
 
       // Next need to draw the actual pixel bitmap
       bool lo = GetBit(finex,bitmapLo);
@@ -177,11 +165,8 @@ void PPU::Execute(float PPUClock) {
       // Set PPU's VBLANK flag
       Registers[2] = SetBit(7,1,Registers[2]);
 
-      if (GetBit(7,Registers[0]))
-      {
+      if (GetBit(7,Registers[0])) {
         NMI_Fired = true;
-        //std::cout<<"PPU: Fired NMI"<<std::endl;
-
         frame = 1; // Just so we don't get spammed by std::couts
       }
 
@@ -243,15 +228,12 @@ void PPU::DrawBitmapPixel(bool lo, bool hi,int Pixel,int Scanline) {
     break;
       case 1:
       col = currentPalette.Colours[0];
-      //col = 0x24;
     break;
     case 2:
       col = currentPalette.Colours[1];
-    //col = 0x1B;
     break;
     case 3:
       col = currentPalette.Colours[2];
-      //col = 0x1;
     break;
   }
 
@@ -276,8 +258,8 @@ void PPU::DrawPixelTest(unsigned char value, int Scanline, int Pixel, unsigned c
 }
 
 void PPU::Draw(sf::RenderWindow &mWindow) {
-    // Draws everything in the PPU's bitmap buffer to the window. should be called once per frame.
-    // Could potentially be called in the PPU::Execute function on the last clock of a frame.
+    /* Draws everything in the PPU's bitmap buffer to the window. should be called once per frame.
+     Could potentially be called in the PPU::Execute function on the last clock of a frame. */
 
     // Cycle through the NES's video output and convert it into a form for SFML to display
     int PixelInc = 0;
@@ -294,8 +276,9 @@ void PPU::Draw(sf::RenderWindow &mWindow) {
     }
 
     displayTexture->update(pixels);
+
     if (mWindow.isOpen()) {
-    mWindow.draw(*displaySprite);
+      mWindow.draw(*displaySprite);
     }
 }
 
@@ -377,18 +360,10 @@ void PPU::SetDataBus(int Scanline, int Pixel) {
 }
 
 unsigned char PPU::ReadNametableByteb(unsigned short databus) {
-  // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
-  // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
-
-  //databus&=0xFFFF; // In the unlikely case that the most significant bit is set, un set it as we want to discard it.
 
   // Ignore the top 3 bits of the data bus as this is relating to fine scroll (the MSB is not used as this is a 15-bit register)
   unsigned short TileLocation = databus << 4;
   TileLocation = TileLocation >> 4;
-  //TileLocation+=0x2000;
-
-  // Get the current fine Y scroll
-  //unsigned char finey = databus >> 12;
 
 	// Should be called once per tile (so 33 times per scanline) or every 8 pixels
   unsigned char data = ReadNametable(0x2000+TileLocation);
@@ -398,14 +373,13 @@ unsigned char PPU::ReadNametableByteb(unsigned short databus) {
 	// Fill the bitmap shift registers with the CHR data for this tile
 	bitmapLo = ReadPatternTable(PatternOffset+(PatternToRead+bitmapline),0);
 	bitmapHi = ReadPatternTable(PatternOffset+(8+PatternToRead+bitmapline),0);
-  //std::cout<<(int)finey<<std::endl;
 
 	return data;
 }
 
 void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
-      // This assumes that the "Pixel" number is bit shifted with each line
-      // Fetch a pixel of character data from CHR and render it
+      /* This assumes that the "Pixel" number is bit shifted with each line
+      Fetch a pixel of character data from CHR and render it */
       unsigned short Lo = ReadPatternTable(ID,0)<<CurrentCycle;
       unsigned short Hi = ReadPatternTable(8+ID,0)<<CurrentCycle;
 
@@ -439,9 +413,9 @@ void PPU::DisplayNametableID(unsigned char ID,int Pixel,int Scanline) {
   // For debug reasons - Draw the nametable ID (as text) to the position where it should be
 }
 void PPU::SelectAddress(unsigned char value) {
-  // The first time the CPU writes to PPUData it is writing the msb of the target address
-  // The following byte is the lsb of the target address
-  // Need to store these somewhere and detect when two writes have occured.
+  /* The first time the CPU writes to PPUData it is writing the msb of the target address
+    The following byte is the lsb of the target address
+    Need to store these somewhere and detect when two writes have occured. */
   if (AddressSelectCounter < 2) {
     // If we don't have two writes, that means the address has not been selected yet.
     DataAddresses[AddressSelectCounter] = value;
@@ -451,7 +425,6 @@ void PPU::SelectAddress(unsigned char value) {
     // Reset the counter immediately after if it has reached 2
     if (AddressSelectCounter == 2) {
       db = ((unsigned short)DataAddresses[1]) + ((unsigned short)DataAddresses[0] << 8);
-      //db &= 0x3FFF;
       AddressSelectCounter = 0;
       DataAddresses[0] = 0x0;
       DataAddresses[1] = 0x0;
@@ -480,9 +453,6 @@ void PPU::WriteOAM(unsigned char value) {
 
 unsigned char PPU::ReadRegister(unsigned short Location) {
   unsigned char RetVal;
-
-
-  //  std::cout<<"PPU_Read_Register: $"<<(int)Location<<std::endl;
 
   switch (Location)
   {
@@ -568,13 +538,6 @@ void PPU::WriteNametable(unsigned short Location,unsigned char Value) {
       Nametables[2].Data[WriteLocation] = Value;
     }
   }
-
-/*
-  if (Nametables[TargetNametable].Type == 2)
-      Nametables[TargetNametable].Data[WriteLocation] = Value; // Nametable is not mirrored, so write it directly in
-  else
-      Nametables[Nametables[TargetNametable].Type].Data[WriteLocation] = Value; // if type is not 3, this nametable mirrors to another one.
-*/
 }
 
 void PPU::WriteRegister(unsigned short Register,unsigned char value) {
@@ -699,8 +662,6 @@ void PPU::EvaluateSprites(int Scanline) {
   for (int i = 0; i<64;i++) {
     // If the y position of the sprite matches the next scanline, add it to tempOAM
 
-    // Pixel >= tempOAM[Sprite[count]+3] && Pixel < tempOAM[Sprite[count]+3]+8
-
     if (spritesOnThisScanline < 8) {
 
     int SpriteLocation = i*4; // The location in memory of the sprite data
@@ -720,8 +681,8 @@ void PPU::EvaluateSprites(int Scanline) {
       Sprite[spritesOnThisScanline] = (spritesOnThisScanline*4);
       SpriteExists[spritesOnThisScanline] = true;
 
-	  // Get the sprite's X Position and store it
-	  spriteUnits[spritesOnThisScanline]->XPos = tempOAM[(spritesOnThisScanline * 4) + 3];
+	    // Get the sprite's X Position and store it
+	    spriteUnits[spritesOnThisScanline]->XPos = tempOAM[(spritesOnThisScanline * 4) + 3];
 
       // Fetch the bitmap data for this sprite
       //int TileBank = GetBit(0,tempOAM[spritesOnThisScanline*4)+1]); - for 8x16 tiles which is not yet implemented
@@ -766,7 +727,7 @@ void PPU::EvaluateSprites(int Scanline) {
       spritesOnThisScanline++;
     }
   } else {
-    // If we have reached here, a sprite overflow has occured - so set the appropriate flag in the PPU's registers to alert the emulated CPU of this
+    // TODO: If we have reached here, a sprite overflow has occured - so set the appropriate flag in the PPU's registers to alert the emulated CPU of this
   }
 
 }

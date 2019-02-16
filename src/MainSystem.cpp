@@ -53,8 +53,6 @@ void MainSystem::Execute() {
     {
       // If this is true, the PPU wants to send an NMI to the CPU
       mainCPU->FireInterrupt(CPUInterrupt::iNMI);
-      //std::cout<<"PPU: "<<(mainPPU->NMI_Fired == true)<<std::endl;
-      //std::cout<<"VBLANK_NMI Fired"<<std::endl;
     }
 
     if (mainCPU->InterruptProcessed == true && mainPPU->NMI_Fired == true ) {
@@ -153,6 +151,5 @@ void MainSystem::Run()
       fps = 0;
     }
 
-}
-  //Execute();
+  }
 }
