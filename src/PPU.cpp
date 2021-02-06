@@ -17,9 +17,9 @@ PPU::PPU() {
     displayTexture->create(256, 240);
     displaySprite->setTexture(*displayTexture);
     displaySprite->setScale(3, 3);
-    NametableMirrorMode = 0;
-    Reset();
-    NMI_Fired = false;
+    nameTableMirrorMode = 0;
+    reset();
+    NMIFired = false;
     OldAttribute = 0;
     OAMAddress = 0;
 
@@ -40,7 +40,7 @@ PPU::PPU() {
 
 }
 
-bool PPU::GetBit(int bit, unsigned char value) {
+bool PPU::getBit(int bit, unsigned char value) {
     // Figures out the value of a current flag by AND'ing the flag register against the flag that needs extracting.
     return value & (1 << bit);
 }
@@ -53,20 +53,20 @@ bool PPU::GetBit(int bit, unsigned char value) {
  * @return - The changed value
  */
 unsigned char
-PPU::SetBit(int bit, bool val, unsigned char value) // Used for setting flags to a value which is not the flag register
+PPU::setBit(int bit, bool val, unsigned char value) // Used for setting flags to a value which is not the flag register
 {
     return val ? value | (1 << bit) : value & ~(1 << bit);
 }
 
 
-void PPU::Reset() {
+void PPU::reset() {
     // Set the initial state of the PPU
-    CurrentCycle = 0;
-    CurrentScanline = 0;
-    CurrentTile = 0;
-    NMI_Fired = false; // If this is true, a NMI will be fired to the CPU
-    AddressSelectCounter = 0;
-    ScrollLatchCounter = 0;
+    currentCycle = 0;
+    currentScanline = 0;
+    currentTile = 0;
+    NMIFired = false; // If this is true, a NMI will be fired to the CPU
+    addressSelectCounter = 0;
+    scrollLatchCounter = 0;
     XScroll = 0;
     YScroll = 0;
 
@@ -88,11 +88,11 @@ void PPU::Reset() {
     }
 
     // Have nametables 2 and 3 mirror the first two initially
-    Nametables[2].Type = 0;
-    Nametables[3].Type = 1;
+    Nametables[2].type = 0;
+    Nametables[3].type = 1;
 }
 
-void PPU::Execute(float PPUClock) {
+void PPU::execute(int PPUClock) {
 
     PPUClocks = 0;
 
@@ -103,90 +103,91 @@ void PPU::Execute(float PPUClock) {
         // RenderNametable() function will handle the rest
 
         // Render to the internal pixel buffer only if we're on a visible pixel (1 to 256 & scanlines 0 to 240)
-        if (CurrentScanline == -1 && CurrentCycle == 1) {
-            // Reset VBLANK flag
-            Registers[2] = SetBit(7, 0, Registers[2]);
+        if (currentScanline == -1 && currentCycle == 1) {
+            // reset VBLANK flag
+            registers[2] = setBit(7, 0, registers[2]);
 
             // Set the data bus for initial rendering
-            int basenametable = GetBit(0, Registers[0]) + GetBit(1, Registers[0]);
+            int basenametable = getBit(0, registers[0]) + getBit(1, registers[0]);
             idb = basenametable << 10; // Register layout is yyyNNYYYYYXXXXX
         }
 
         // Get the nametable byte for this tile
-        int Pixel = CurrentCycle - 1; // Account for the non-drawing cycle
+        int Pixel = currentCycle - 1; // Account for the non-drawing cycle
 
-        if (CurrentCycle == 0) {
-            finex = 7; // Reset finex on the idle scanline
+        if (currentCycle == 0) {
+            tileBitmapXOffset = 7; // reset tileBitmapXOffset on the idle scanline
         }
 
-        if (CurrentCycle >= 1 && CurrentCycle <= 256 && CurrentScanline <= 240 && CurrentScanline >= 0) {
+        if (currentCycle >= 1 && currentCycle <= 256 && currentScanline <= 240 && currentScanline >= 0) {
 
-            if (finex == 7) {
-                SetDataBus(CurrentScanline, Pixel);
-                nametablebyte = ReadNametableByteb(idb);
+            // At the start of each tile on this scanline, fetch its bitmap data
+            if (tileBitmapXOffset == 7) {
+                setDataBus(currentScanline, Pixel);
+                getBitmapDataFromNameTable(idb);
                 idb++; // Increment the data bus to fetch the next tile
             }
 
-            // Next need to draw the actual pixel bitmap
-            bool lo = GetBit(finex, bitmapLo);
-            bool hi = GetBit(finex, bitmapHi);
+            // Get what the value of the current pixel should be from the current tile's bitmap data
+            bool lo = getBit(tileBitmapXOffset, bitmapLo);
+            bool hi = getBit(tileBitmapXOffset, bitmapHi);
 
-            finex--;
-            finex &= 7; // 3-bit register, bit 4 should always be 0.
+            tileBitmapXOffset--;
+            tileBitmapXOffset &= 7; // 3-bit register, bit 4 should always be 0.
 
             // Read an attribute byte for it to display
-            currentAttribute = ReadAttribute(Pixel, CurrentScanline,
+            currentAttribute = readAttribute(Pixel, currentScanline,
                                              0); // For now just read from the first attribute table to make sure things are working
 
-            ReadColour(currentAttribute);
-            DrawBitmapPixel(lo, hi, Pixel, CurrentScanline);
+            readColour(currentAttribute);
+            drawBitmapPixel(lo, hi, Pixel, currentScanline);
 
-            PixelOffset++; // The pixel offset of the current tile
+            pixelOffset++; // The pixel offset of the current tile
 
-            // Reset the pixel counter if it goes above 7 as we'll need to fetch the next tile soon
-            if (PixelOffset > 7)
-                PixelOffset = 0;
+            // reset the pixel counter if it goes above 7 as we'll need to fetch the next tile soon
+            if (pixelOffset > 7)
+                pixelOffset = 0;
 
             // Render the sprites for this scanline
-            RenderSprites(CurrentScanline, Pixel);
+            renderSprites(currentScanline, Pixel);
 
             // Evaluate sprites for the next scanline at cycle 256
-            if (CurrentCycle == 256)
-                EvaluateSprites(CurrentScanline + 1);
+            if (currentCycle == 256)
+                evaluateSprites(currentScanline + 1);
         }
 
         // Handle switching to the next scanline here
-        if (CurrentCycle == 341) {
-            CurrentCycle = 0;
-            CurrentScanline++;
+        if (currentCycle == 341) {
+            currentCycle = 0;
+            currentScanline++;
         }
 
         // VBLANK time - Set the VBLANK flag to true and fire an NMI to the CPU (if this functionality is enabled)
-        if (CurrentScanline == 241 && CurrentCycle == 1) {
+        if (currentScanline == 241 && currentCycle == 1) {
             // Fire VBLANK NMI if NMI_Enable is true
             // Set PPU's VBLANK flag
-            Registers[2] = SetBit(7, 1, Registers[2]);
+            registers[2] = setBit(7, 1, registers[2]);
 
-            if (GetBit(7, Registers[0])) {
-                NMI_Fired = true;
+            if (getBit(7, registers[0])) {
+                NMIFired = true;
                 frame = 1; // Just so we don't get spammed by std::couts
             }
 
 
 #ifdef PPULogging
             std::cout<<"VBLANK_BEGIN"<<std::endl;
-            std::cout<<(int)Registers[2]<<std::endl;
+            std::cout<<(int)registers[2]<<std::endl;
 #endif
         }
 
         // If we're on the last scanline, reset the counters to 0 for the next frame.
-        if (CurrentScanline >= 260) {
-            CurrentScanline = -1;
-            CurrentCycle = 0;
-            PixelOffset = 0;
+        if (currentScanline >= 260) {
+            currentScanline = -1;
+            currentCycle = 0;
+            pixelOffset = 0;
         } else {
             PPUClocks++;
-            CurrentCycle++;
+            currentCycle++;
         }
 
     }
@@ -194,20 +195,20 @@ void PPU::Execute(float PPUClock) {
     PPUClocks = 0;
 }
 
-void PPU::RenderSprites(int Scanline, int Pixel) {
+void PPU::renderSprites(int scanLine, int pixel) {
     // Check if any sprites need to be rendered on this pixel. if so, render them...
     int count = 7;
 
     while (count >= 0) {
         // Figure out if a sprite is on this pixel (if it exists in OAM too)
-        if (SpriteExists[count]) {
+        if (spriteExists[count]) {
             // The sprite exists on this scanline if this check passed
-            if (Pixel >= spriteUnits[count]->XPos && Pixel < spriteUnits[count]->XPos + 8) {
+            if (pixel >= spriteUnits[count]->XPos && pixel < spriteUnits[count]->XPos + 8) {
                 // Render the bit of the the sprite's bitmap data for this pixel
-                bool bitlo = GetBit(7, spriteUnits[count]->bitmapLo);
-                bool bithi = GetBit(7, spriteUnits[count]->bitmapHi);
+                bool bitlo = getBit(7, spriteUnits[count]->bitmapLo);
+                bool bithi = getBit(7, spriteUnits[count]->bitmapHi);
 
-                DrawBitmapPixel(bitlo, bithi, Pixel, Scanline, count);
+                drawBitmapPixel(bitlo, bithi, pixel, scanLine, count);
 
                 // Bit-shift the bitmap to the next pixel
                 spriteUnits[count]->bitmapHi <<= 1;
@@ -219,12 +220,12 @@ void PPU::RenderSprites(int Scanline, int Pixel) {
 
 }
 
-void PPU::DrawBitmapPixel(bool lo, bool hi, int Pixel, int Scanline) {
+void PPU::drawBitmapPixel(bool lo, bool hi, int pixel, int scanLine) {
     int pixelvalue = (lo + (hi << 1));
     unsigned char col = 0x5;
     switch (pixelvalue) {
         case 0:
-            col = ReadPalette(0x3F00);
+            col = readPalette(0x3F00);
             break;
         case 1:
             col = currentPalette.Colours[0];
@@ -240,35 +241,31 @@ void PPU::DrawBitmapPixel(bool lo, bool hi, int Pixel, int Scanline) {
             break;
     }
 
-    DrawPixel(col, Scanline, Pixel);
+    drawPixel(col, scanLine, pixel);
 }
 
-void PPU::DrawBitmapPixel(bool lo, bool hi, int Pixel, int Scanline, int spriteId) {
+void PPU::drawBitmapPixel(bool lo, bool hi, int pixel, int scanLine, int spriteId) {
     int pixelValue = (lo + (hi << 1));
 
     if (pixelValue != 0) {
-        DrawPixel(spriteUnits[spriteId]->palette.Colours[pixelValue - 1], Scanline, Pixel);
+        drawPixel(spriteUnits[spriteId]->palette.Colours[pixelValue - 1], scanLine, pixel);
     }
 }
 
-void PPU::DrawPixel(unsigned char value, int Scanline, int Pixel) {
-    NESPixels[(Scanline * 256) +
-              Pixel] = value; // Scanline 0 is an idle scanline, so -1 so we don't overflow the pixel space here (so that pixel 256 actually appears on the right hand side)
+void PPU::drawPixel(unsigned char value, int scanLine, int pixel) {
+    NESPixels[(scanLine * 256) +
+              pixel] = value; // scanLine 0 is an idle scanline, so -1 so we don't overflow the pixel space here (so that pixel 256 actually appears on the right hand side)
 }
 
-void PPU::DrawPixelTest(unsigned char value, int Scanline, int Pixel, unsigned char ID) {
-    NESPixels[(Scanline * 256) + Pixel - 1] =  value - ID;
-}
-
-void PPU::Draw(sf::RenderWindow &mWindow) {
+void PPU::draw(sf::RenderWindow &window) {
     // Draws everything in the PPU's bitmap buffer to the window. should be called once per frame.
-    // Could potentially be called in the PPU::Execute function on the last clock of a frame.
+    // Could potentially be called in the PPU::execute function on the last clock of a frame.
 
     // Cycle through the NES's video output and convert it into a form for SFML to display
     int PixelInc = 0;
     for (int i = 0; i <= (256 * 239); i++) {
         // Get the colour of the current pixel
-        sf::Color CurrentColour = GetColour(NESPixels[i]);
+        sf::Color CurrentColour = getColour(NESPixels[i]);
 
         pixels[PixelInc] = CurrentColour.r;
         pixels[PixelInc + 1] = CurrentColour.g;
@@ -278,157 +275,143 @@ void PPU::Draw(sf::RenderWindow &mWindow) {
     }
 
     displayTexture->update(pixels);
-    if (mWindow.isOpen()) {
-        mWindow.draw(*displaySprite);
+    if (window.isOpen()) {
+        window.draw(*displaySprite);
     }
 }
 
 void PPU::RenderNametable(int Nametable, int OffsetX, int OffsetY) {
-    // Renders 1 pixel of a Nametable
+    // Renders 1 pixel of a NameTable
 
-    if (TileCounter == 7) { // Each tile is 8 pixels in size, so increment this with each 8 pixels
-        TileCounter = 0;
-        CurrentTile++;
+    if (tileCounter == 7) { // Each tile is 8 pixels in size, so increment this with each 8 pixels
+        tileCounter = 0;
+        currentTile++;
     }
 }
 
 void PPU::PPUDWrite(unsigned char value) {
     // Write the value to the PPU's memory, then increment the data bus
-    WriteMemory(db, value);
-    NB();
+    writeMemory(db, value);
+    getNextByte();
 }
 
 unsigned char PPU::PPUDRead() {
     unsigned char RetVal = 0;
-    RetVal = ReadMemory(db);
-    NB();
+    RetVal = readMemory(db);
+    getNextByte();
     return RetVal;
 }
 
-void PPU::WriteMemory(unsigned short Location, unsigned char value) {
+void PPU::writeMemory(unsigned short location, unsigned char value) {
     // Write a value to the PPU's memory
 
 #ifdef DATABUSLOGGING
-    std::cout<<"PPU_DATA_WRITE $"<<std::hex<<(int)Location<<" = $"<<(int)value<<std::endl;
+    std::cout<<"PPU_DATA_WRITE $"<<std::hex<<(int)location<<" = $"<<(int)value<<std::endl;
 #endif
 
     // Direct the data to the appropriate part of the PPU's memory...
-    if (CHRRAM && Location <= 0x1FFF)
-        cROM[Location] = value;
+    if (CHRRAM && location <= 0x1FFF)
+        cROM[location] = value;
 
-    if (Location >= 0x2000 && Location <= 0x2FFF)
-        WriteNametable(Location, value); // Write to the appropriate nametable
+    if (location >= 0x2000 && location <= 0x2FFF)
+        writeNameTable(location, value); // Write to the appropriate nametable
 
-    if (Location >= 0x3F00 && Location <= 0x3F1F)
-        WritePalette(Location, value);
+    if (location >= 0x3F00 && location <= 0x3F1F)
+        writePalette(location, value);
 }
 
-unsigned char PPU::ReadMemory(unsigned short Location) {
-    if (Location <= 0x1FFF)
-        return cROM[Location];
+unsigned char PPU::readMemory(unsigned short location) {
+    if (location <= 0x1FFF) {
+        return cROM[location];
+    }
 
-    if (Location >= 0x2000 && Location <= 0x2FFF)
-        return ReadNametable(Location);
+    if (location <= 0x2FFF) {
+        return readNameTable(location);
+    }
 
-    if (Location >= 0x3F00 && Location <= 0x3F1F)
-        return ReadPalette(Location);
+    if (location <= 0x3F1F) {
+        return readPalette(location);
+    }
+
+    return 0x0; // Out of range
 }
 
-unsigned char PPU::NB() {
+unsigned char PPU::getNextByte() {
     // Increment the address bus depending on the value of the address increment flag
-    db += GetBit(2, Registers[0]) ? 32 : 1;
-    return db;
+    return (db += getBit(2, registers[0]) ? 32 : 1);
 }
 
 
-void PPU::SetDataBus(int Scanline, int Pixel) {
+void PPU::setDataBus(int currentScanLine, int currentPixelXLocation) {
     // Work out values from scroll register
     unsigned short coarseyreg = (YScroll & 0xF8);
 
-    unsigned short basenametable = GetBit(1, Registers[0]) + (GetBit(0, Registers[0]) << 1);
+    unsigned short basenametable = getBit(1, registers[0]) + (getBit(0, registers[0]) << 1);
 
     idb = (basenametable << 10) + (coarseyreg << 2); // Register layout is yyyNNYYYYYXXXXX
-    unsigned short coarsey = (Scanline / 8);
-    unsigned short coarsex = Pixel / 8;
-    idb = idb + (coarsey << 5);
-    idb = idb + (coarsex);
+    unsigned short yScrollOffset = (currentScanLine / 8);
+    unsigned short xScrollOffset = currentPixelXLocation / 8;
+    idb = idb + (yScrollOffset << 5);
+    idb = idb + (xScrollOffset);
     idb &= 0x7FFF;
 
     // Set the y position in the bitmap for this tile
-    bitmapline = Scanline & 7;
+    bitmapLine = currentScanLine & 7;
 }
 
-unsigned char PPU::ReadNametableByteb(unsigned short databus) {
-    // Get the Nametable byte for the current pixel (Right now just assume nametable 0)
+void PPU::getBitmapDataFromNameTable(unsigned short databus) {
 
     // Ignore the top 3 bits of the data bus as this is relating to fine scroll (the MSB is not used as this is a 15-bit register)
-    unsigned short TileLocation = databus;// << 4;
+    unsigned short TileLocation = databus;
 
     // Should be called once per tile (so 33 times per scanline) or every 8 pixels
-    unsigned char data = ReadNametable(0x2000 + TileLocation);
+    unsigned char data = readNameTable(0x2000 + TileLocation);
     unsigned short PatternOffset = 0;
     int PatternToRead = (data) * 16;
 
     // Fill the bitmap shift registers with the CHR data for this tile
-    bitmapLo = ReadPatternTable(PatternOffset + (PatternToRead + bitmapline), 0);
-    bitmapHi = ReadPatternTable(PatternOffset + (8 + PatternToRead + bitmapline), 0);
-
-    return data;
+    bitmapLo = readPatternTable(PatternOffset + (PatternToRead + bitmapLine), 0);
+    bitmapHi = readPatternTable(PatternOffset + (8 + PatternToRead + bitmapLine), 0);
 }
 
-void PPU::RenderTilePixel(unsigned char ID, int Pixel, int Scanline) {
-    // This assumes that the "Pixel" number is bit shifted with each line
-    // Fetch a pixel of character data from CHR and render it
-    unsigned short Lo = ReadPatternTable(ID, 0) << CurrentCycle;
-    unsigned short Hi = ReadPatternTable(8 + ID, 0) << CurrentCycle;
-
-    // Draw a pixel on screen of temporary colour for now
-    int PixelColour = GetBit(7, Lo);
-
-}
-
-unsigned char PPU::ReadPatternTable(unsigned short Location, int PatternType) {
+unsigned char PPU::readPatternTable(unsigned short Location, int PatternType) {
     // Pattern type 0 = Background, 1 = Sprites
 
     // Add more logic to this later for handling mappers
     unsigned short offset = 0x0;
 
-    if (GetBit((4 - PatternType), Registers[0])) {
+    if (getBit((4 - PatternType), registers[0])) {
         offset = 0x1000;
     }
     return cROM[offset + Location];
 }
 
-void PPU::WriteCROM(unsigned short Location, unsigned char Value) {
+void PPU::writeCROM(unsigned short location, unsigned char value) {
     // Will need to add more logic to these later for mappers
-    cROM[Location] = Value;
+    cROM[location] = value;
 }
 
-unsigned char PPU::ReadCROM(unsigned short Location) {
+unsigned char PPU::readCROM(unsigned short location) {
     // Will need to add more logic to these later for mappers
-    return cROM[Location];
+    return cROM[location];
 }
 
-void PPU::DisplayNametableID(unsigned char ID, int Pixel, int Scanline) {
-    // For debug reasons - Draw the nametable ID (as text) to the position where it should be
-}
-
-void PPU::SelectAddress(unsigned char value) {
+void PPU::selectAddress(unsigned char value) {
     /* The first time the CPU writes to PPUData it is writing the msb of the target address
        The following byte is the lsb of the target address
        Need to store these somewhere and detect when two writes have occured. */
-    if (AddressSelectCounter < 2) {
+    if (addressSelectCounter < 2) {
         // If we don't have two writes, that means the address has not been selected yet.
-        DataAddresses[AddressSelectCounter] = value;
-        AddressSelectCounter++;
+        dataAddresses[addressSelectCounter] = value;
+        addressSelectCounter++;
     }
 
-    // Reset the counter immediately after if it has reached 2
-    if (AddressSelectCounter == 2) {
-        db = ((unsigned short) DataAddresses[1]) + ((unsigned short) DataAddresses[0] << 8);
-        AddressSelectCounter = 0;
-        DataAddresses[0] = 0x0;
-        DataAddresses[1] = 0x0;
+    // reset the counter immediately after if it has reached 2
+    if (addressSelectCounter == 2) {
+        db = ((unsigned short) dataAddresses[1]) + ((unsigned short) dataAddresses[0] << 8);
+        addressSelectCounter = 0;
+        dataAddresses[0] = 0x0;
+        dataAddresses[1] = 0x0;
 #ifdef DATABUSLOGGING
         std::cout<<"PPU_DATA Location Selected: $"<<std::hex<<(int)db<<std::endl;
 #endif
@@ -437,158 +420,158 @@ void PPU::SelectAddress(unsigned char value) {
 
 }
 
-void PPU::WriteScroll(unsigned char value) {
-    // Is a latch - works like the above SelectAddress function.
-    if (AddressSelectCounter == 0) {
+void PPU::writeScrollRegister(unsigned char value) {
+    // Is a latch - works like the above selectAddress function.
+    if (addressSelectCounter == 0) {
         // Writing to X
         XScroll = value;
-        AddressSelectCounter++;
+        addressSelectCounter++;
     } else {
         // Writing to Y
         YScroll = value;
-        AddressSelectCounter = 0;
+        addressSelectCounter = 0;
     }
 }
 
-void PPU::SelectOAMAddress(unsigned char value) {
+void PPU::selectOAMAddress(unsigned char value) {
     OAMAddress = value;
 }
 
-void PPU::WriteOAM(unsigned short Location, unsigned char value) {
+void PPU::writeOAM(unsigned short location, unsigned char value) {
     // Will be used to implement OAMDMA
-    OAM[Location] = value;
+    OAM[location] = value;
 }
 
-void PPU::WriteOAM(unsigned char value) {
+void PPU::writeOAM(unsigned char value) {
     // Perform a single write to OAM
     OAM[OAMAddress] = value;
     OAMAddress++;
 }
 
-unsigned char PPU::ReadRegister(unsigned short Location) {
+unsigned char PPU::readRegister(unsigned short location) {
     unsigned char RetVal;
 
-    switch (Location) {
+    switch (location) {
         case 2:
-            AddressSelectCounter = 0; // Reading from the PPUADDR register means the CPU wants to reset the address writing.
-            RetVal = Registers[2]; // We need to clear the vblank flag when this register is read, so store its previous state here
-            Registers[2] = SetBit(7, 0, Registers[2]); // Clear the vblank flag
-            ScrollLatchCounter = 0;
+            addressSelectCounter = 0; // Reading from the PPUADDR register means the CPU wants to reset the address writing.
+            RetVal = registers[2]; // We need to clear the vblank flag when this register is read, so store its previous state here
+            registers[2] = setBit(7, 0, registers[2]); // Clear the vblank flag
+            scrollLatchCounter = 0;
             return RetVal;
         case 0x7:
             return PPUDRead();
             break;
         default:
-            return Registers[Location];
+            return registers[location];
     }
 
 }
 
-unsigned char PPU::ReadNametable(unsigned short Location) {
+unsigned char PPU::readNameTable(unsigned short location) {
 
-    Location -= 0x2000; // Strip off the first $2000 - we don't need it
+    location -= 0x2000; // Strip off the first $2000 - we don't need it
     int TargetNametable = 0;
 
-    if (Location <= 0x3FF) {
+    if (location <= 0x3FF) {
         TargetNametable = 0;
-    } else if (Location <= 0x7FF) {
+    } else if (location <= 0x7FF) {
         TargetNametable = 1;
-    } else if (Location <= 0xBFF) {
+    } else if (location <= 0xBFF) {
         TargetNametable = 2;
     } else {
         TargetNametable = 3;
     }
 
-    unsigned short ReadLocation = Location & 0x3FF;
+    unsigned short ReadLocation = location & 0x3FF;
 
-    return Nametables[TargetNametable].Data[ReadLocation];
+    return Nametables[TargetNametable].data[ReadLocation];
 }
 
-void PPU::WriteNametable(unsigned short Location, unsigned char Value) {
-    Location -= 0x2000; // Strip off the first $2000 - we don't need it
+void PPU::writeNameTable(unsigned short location, unsigned char value) {
+    location -= 0x2000; // Strip off the first $2000 - we don't need it
     int TargetNametable = 0;
 
-    if (Location <= 0x3FF) {
+    if (location <= 0x3FF) {
         TargetNametable = 0;
-    } else if (Location <= 0x7FF) {
+    } else if (location <= 0x7FF) {
         TargetNametable = 1;
-    } else if (Location <= 0xBFF) {
+    } else if (location <= 0xBFF) {
         TargetNametable = 2;
     } else {
         TargetNametable = 3;
     }
 
-    //unsigned short WriteLocation = Location-(0x400*TargetNametable);
-    unsigned short WriteLocation = Location & 0x3FF;
+    //unsigned short WriteLocation = location-(0x400*TargetNametable);
+    unsigned short WriteLocation = location & 0x3FF;
 #ifdef DATABUSLOGGING
-    std::cout<<std::hex<<"NAMETABLE "<<(int) TargetNametable<<" WRITE at: $"<<(int)OldLocation<<" : $"<<(int)Location<< " : $"<<(int) WriteLocation<<" = $"<<(int)Value<<std::endl;
+    std::cout<<std::hex<<"NAMETABLE "<<(int) TargetNametable<<" WRITE at: $"<<(int)OldLocation<<" : $"<<(int)location<< " : $"<<(int) WriteLocation<<" = $"<<(int)value<<std::endl;
 #endif
 
-    // Write the data to the Nametable
-    if (NametableMirrorMode == 0) {
+    // Write the data to the NameTable
+    if (nameTableMirrorMode == 0) {
         // Vertical mirroring
         if (TargetNametable == 0 || TargetNametable == 1) {
             // Nametables 0 and 1 mirror eachother in this mode (2000 & 2400)
-            Nametables[0].Data[WriteLocation] = Value;
-            Nametables[1].Data[WriteLocation] = Value;
+            Nametables[0].data[WriteLocation] = value;
+            Nametables[1].data[WriteLocation] = value;
         } else {
-            Nametables[2].Data[WriteLocation] = Value;
-            Nametables[3].Data[WriteLocation] = Value;
+            Nametables[2].data[WriteLocation] = value;
+            Nametables[3].data[WriteLocation] = value;
         }
     }
 
-    if (NametableMirrorMode == 1) {
+    if (nameTableMirrorMode == 1) {
         // Horizontal mirroring
         if (TargetNametable == 0 || TargetNametable == 2) {
-            Nametables[0].Data[WriteLocation] = Value;
-            Nametables[2].Data[WriteLocation] = Value;
+            Nametables[0].data[WriteLocation] = value;
+            Nametables[2].data[WriteLocation] = value;
         } else {
-            Nametables[1].Data[WriteLocation] = Value;
-            Nametables[3].Data[WriteLocation] = Value;
+            Nametables[1].data[WriteLocation] = value;
+            Nametables[3].data[WriteLocation] = value;
         }
     }
 }
 
-void PPU::WriteRegister(unsigned short Register, unsigned char value) {
-    switch (Register) {
+void PPU::writeRegister(unsigned short registerId, unsigned char value) {
+    switch (registerId) {
         case 2:
-            // Register 2 is read only
+            // registerId 2 is read only
             return;
         case 3:
             // Select OAM address
-            SelectOAMAddress(value);
+            selectOAMAddress(value);
             break;
         case 4:
             // Write to PPU OAM
-            WriteOAM(value);
+            writeOAM(value);
             break;
         case 5:
             // Write to scroll register
-            WriteScroll(value);
+            writeScrollRegister(value);
             break;
         case 6:
-            SelectAddress(value); // PPU is writing to PPUDATA, so handle address selecting
+            selectAddress(value); // PPU is writing to PPUDATA, so handle address selecting
             break;
         case 7:
             PPUDWrite(value); // Write to PPU memory
             break;
         default:
-            Registers[Register] = value;
+            registers[registerId] = value;
             break;
     }
 
     // Write the 5 least significant bits of the written value to the PPUStatus register
     unsigned char lsb = value;
-    lsb = SetBit(7, false, lsb);
-    lsb = SetBit(6, false, lsb);
-    lsb = SetBit(5, false, lsb);
-    Registers[2] = Registers[2] + lsb;
+    lsb = setBit(7, false, lsb);
+    lsb = setBit(6, false, lsb);
+    lsb = setBit(5, false, lsb);
+    registers[2] = registers[2] + lsb;
 
 #ifdef PPULogging
-    if (Register == 0) {
+    if (registerId == 0) {
     int value1 = (int)value;
     std::cout<<std::hex<<" ";
-    switch (Register)
+    switch (registerId)
     {
       case 0:
         std::cout<<"PPUCTRL = $"<<value1;
@@ -621,26 +604,26 @@ void PPU::WriteRegister(unsigned short Register, unsigned char value) {
 #endif
 
 #ifdef PPULOGNEWLINE
-    if (Register == 0)
+    if (registerId == 0)
     std::cout<<" "<<std::endl;
 #endif
 
 }
 
-unsigned char PPU::ReadAttribute(int Pixel, int Scanline, int Nametable) {
+unsigned char PPU::readAttribute(int pixel, int scanline, int nameTable) {
     // Read the Attribute for this tile and return the colour palette that it should be using
     // 1 Atrribute byte covers a 32x32 pixel are of the screen (4x4 tiles)
-    int AttributeX = (Pixel / 8) / 4;
-    int AttributeY = ((Scanline / 8) / 4) * 8;
+    int AttributeX = (pixel / 8) / 4;
+    int AttributeY = ((scanline / 8) / 4) * 8;
 
-    //unsigned char Attribute = Nametables[Nametable].Data[0xC0+(AttributeX+AttributeY)];
+    //unsigned char Attribute = Nametables[nameTable].data[0xC0+(AttributeX+AttributeY)];
     int Location = 0x23C0 + (AttributeX + AttributeY);
 
-    unsigned char Attribute = ReadNametable(Location);
+    unsigned char Attribute = readNameTable(Location);
 
     // Each attribute byte contains data for the colour palette listing of 4 tiles, so we need to figure out which tile we are currently working on
-    int CurrentXTile = ((Pixel / 8) / 2) % 2;
-    int CurrentYTile = ((Scanline / 8) / 2) % 2;
+    int CurrentXTile = ((pixel / 8) / 2) % 2;
+    int CurrentYTile = ((scanline / 8) / 2) % 2;
 
     unsigned char tempstore1 = (CurrentYTile << 1) | CurrentXTile; // The current tile number that we're on (0,1,2 or 3)
 
@@ -650,7 +633,7 @@ unsigned char PPU::ReadAttribute(int Pixel, int Scanline, int Nametable) {
 
 }
 
-void PPU::EvaluateSprites(int Scanline) {
+void PPU::evaluateSprites(int currentScanLine) {
     // Fill tempOAM with the data for the sprites on this scanline
     spritesOnThisScanline = 0;
     SpriteZeroOnThisScanline = false;
@@ -663,7 +646,7 @@ void PPU::EvaluateSprites(int Scanline) {
     // Clear the sprite render units
     for (int i = 0; i < 8; i++) {
         Sprite[i] = 0;
-        SpriteExists[i] = false;
+        spriteExists[i] = false;
         spriteUnits[i]->bitmapHi = 0;
         spriteUnits[i]->bitmapLo = 0;
         spriteUnits[i]->palette.Colours[0] = 0;
@@ -678,7 +661,7 @@ void PPU::EvaluateSprites(int Scanline) {
 
             int SpriteLocation = i * 4; // The location in memory of the sprite data
 
-            if (Scanline >= OAM[SpriteLocation] && Scanline < (OAM[SpriteLocation] + 8)) {
+            if (currentScanLine >= OAM[SpriteLocation] && currentScanLine < (OAM[SpriteLocation] + 8)) {
                 tempOAM[(spritesOnThisScanline * 4)] = OAM[SpriteLocation];
                 tempOAM[(spritesOnThisScanline * 4) + 1] = OAM[SpriteLocation + 1];
                 tempOAM[(spritesOnThisScanline * 4) + 2] = OAM[SpriteLocation + 2];
@@ -691,33 +674,33 @@ void PPU::EvaluateSprites(int Scanline) {
 
                 // Assign this sprite to a sprite output unit
                 Sprite[spritesOnThisScanline] = (spritesOnThisScanline * 4);
-                SpriteExists[spritesOnThisScanline] = true;
+                spriteExists[spritesOnThisScanline] = true;
 
                 // Get the sprite's X Position and store it
                 spriteUnits[spritesOnThisScanline]->XPos = tempOAM[(spritesOnThisScanline * 4) + 3];
 
                 // Fetch the bitmap data for this sprite
-                //int TileBank = GetBit(0,tempOAM[spritesOnThisScanline*4)+1]); - for 8x16 tiles which is not yet implemented
+                //int TileBank = getBit(0,tempOAM[spritesOnThisScanline*4)+1]); - for 8x16 tiles which is not yet implemented
                 int TileBank = 0;
 
-                if (GetBit(3, Registers[0]))
+                if (getBit(3, registers[0]))
                     TileBank = 0x1000; // Selection of the pattern table to use is done by writing to bit 3 of PPUCTRL register
 
                 int TileID = ((tempOAM[(spritesOnThisScanline * 4) + 1])) *
                              16;// >> 1)<<1)*16; // Discard the least significant bit as we just extracted it above.
 
-                int bitmapline = (Scanline - tempOAM[spritesOnThisScanline * 4]) & 7;
+                int bitmapline = (currentScanLine - tempOAM[spritesOnThisScanline * 4]) & 7;
 
                 // If vertical mirroring is enabled, fetch bytes in reverse from normal
-                if (GetBit(7, tempOAM[(spritesOnThisScanline * 4) + 2]))
+                if (getBit(7, tempOAM[(spritesOnThisScanline * 4) + 2]))
                     bitmapline = (~bitmapline) & 7;
 
                 // Fetch the bitmap data for the sprite
-                spriteUnits[spritesOnThisScanline]->bitmapLo = ReadPatternTable(TileID + bitmapline, 1);
-                spriteUnits[spritesOnThisScanline]->bitmapHi = ReadPatternTable(8 + TileID + bitmapline, 1);
+                spriteUnits[spritesOnThisScanline]->bitmapLo = readPatternTable(TileID + bitmapline, 1);
+                spriteUnits[spritesOnThisScanline]->bitmapHi = readPatternTable(8 + TileID + bitmapline, 1);
 
                 // Handle horizontal mirroring
-                if (GetBit(6, tempOAM[(spritesOnThisScanline * 4) + 2])) {
+                if (getBit(6, tempOAM[(spritesOnThisScanline * 4) + 2])) {
 
                     unsigned char tmp1 = 0;
                     unsigned char tmp2 = 0;
@@ -733,10 +716,10 @@ void PPU::EvaluateSprites(int Scanline) {
                 }
 
                 // Figure out which colour palette the sprite is supposed to use, and store it.
-                int Attribute = ((GetBit(0, tempOAM[(spritesOnThisScanline * 4) + 2])) +
-                                 (GetBit(1, tempOAM[(spritesOnThisScanline * 4) + 2]) << 1) + 4);
+                int Attribute = ((getBit(0, tempOAM[(spritesOnThisScanline * 4) + 2])) +
+                                 (getBit(1, tempOAM[(spritesOnThisScanline * 4) + 2]) << 1) + 4);
 
-                ReadColour(Attribute, spritesOnThisScanline);
+                readColour(Attribute, spritesOnThisScanline);
 
                 spritesOnThisScanline++;
             }
@@ -748,51 +731,51 @@ void PPU::EvaluateSprites(int Scanline) {
 
 }
 
-void PPU::ReadColour(int Attribute) {
-    int Location = 0x3F01 + (Attribute * 4);
+void PPU::readColour(int attribute) {
+    int Location = 0x3F01 + (attribute * 4);
 
-    currentPalette.Colours[0] = ReadPalette(Location);
-    currentPalette.Colours[1] = ReadPalette(Location + 1);
-    currentPalette.Colours[2] = ReadPalette(Location + 2);
-
-}
-
-void PPU::ReadColour(int Attribute, int Sprite) {
-    int Location = 0x3F01 + (Attribute * 4);
-    spriteUnits[Sprite]->palette.Colours[0] = ReadPalette(Location);
-    spriteUnits[Sprite]->palette.Colours[1] = ReadPalette(Location + 1);
-    spriteUnits[Sprite]->palette.Colours[2] = ReadPalette(Location + 2);
-
+    currentPalette.Colours[0] = readPalette(Location);
+    currentPalette.Colours[1] = readPalette(Location + 1);
+    currentPalette.Colours[2] = readPalette(Location + 2);
 
 }
 
-unsigned char PPU::ReadPalette(unsigned short Location) {
-    Location -= 0x3F00;
-    return PaletteMemory[Location];
+void PPU::readColour(int attribute, int spriteId) {
+    int Location = 0x3F01 + (attribute * 4);
+    spriteUnits[spriteId]->palette.Colours[0] = readPalette(Location);
+    spriteUnits[spriteId]->palette.Colours[1] = readPalette(Location + 1);
+    spriteUnits[spriteId]->palette.Colours[2] = readPalette(Location + 2);
+
+
 }
 
-void PPU::WritePalette(unsigned short Location, unsigned char Value) {
+unsigned char PPU::readPalette(unsigned short location) {
+    location -= 0x3F00;
+    return PaletteMemory[location];
+}
 
-    Location -= 0x3F00;
+void PPU::writePalette(unsigned short location, unsigned char value) {
+
+    location -= 0x3F00;
 
     // Handle the mirrored values
-    if (Location == 0x0 || Location == 0x10) {
-        PaletteMemory[0x0] = Value;
-        PaletteMemory[0x10] = Value;
-    } else if (Location == 0x04 || Location == 0x14) {
-        PaletteMemory[0x04] = Value;
-        PaletteMemory[0x14] = Value;
-    } else if (Location == 0x08 || Location == 0x18) {
-        PaletteMemory[0x08] = Value;
-        PaletteMemory[0x18] = Value;
-    } else if (Location == 0x0C || Location == 0x1C) {
-        PaletteMemory[0x0C] = Value;
-        PaletteMemory[0x1C] = Value;
+    if (location == 0x0 || location == 0x10) {
+        PaletteMemory[0x0] = value;
+        PaletteMemory[0x10] = value;
+    } else if (location == 0x04 || location == 0x14) {
+        PaletteMemory[0x04] = value;
+        PaletteMemory[0x14] = value;
+    } else if (location == 0x08 || location == 0x18) {
+        PaletteMemory[0x08] = value;
+        PaletteMemory[0x18] = value;
+    } else if (location == 0x0C || location == 0x1C) {
+        PaletteMemory[0x0C] = value;
+        PaletteMemory[0x1C] = value;
     }
-    PaletteMemory[Location] = Value;
+    PaletteMemory[location] = value;
 }
 
-sf::Color PPU::GetColour(unsigned char NESColour) {
+sf::Color PPU::getColour(unsigned char NESColour) {
     // Converts a NES colour to a sf::Color to be displayed on the actual emulator's output.
     sf::Color RetVal;
 

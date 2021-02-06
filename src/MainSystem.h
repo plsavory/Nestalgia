@@ -6,15 +6,19 @@
 #include "MemoryManager.h"
 #include "CPU6502.h"
 
-class MainSystem
-{
+class MainSystem {
 public:
   MainSystem();
+
   ~MainSystem();
-  bool LoadROM(std::string ROMFile);
-  void Execute();
-  void Reset();
-  void Run();
+
+  bool loadROM(std::string fileName);
+
+  void execute();
+
+  void reset();
+
+  void run();
 private:
   InputManager *mainInput;
   MemoryManager *mainMemory;
@@ -22,5 +26,5 @@ private:
   PPU *mainPPU;
   sf::Clock *frameRate;
   int fps; // Increment each time the PPU outputs 1 frame
-  bool Focused; // Does the window have focus or not?
+  bool hasFocus; // Does the window have focus or not?
 };

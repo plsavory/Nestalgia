@@ -3,17 +3,17 @@ enum FileType {iNESOriginal,iNES,iNES2};
 
 struct Cartridge
 {
-	unsigned char Header[16];
-	unsigned char Trainer[512];
-	unsigned char pROM[0x200000]; // 2kb is the largest ROM size ever found in iNes format, so have this as a hard limit.
-	unsigned char cROM[0x80000]; // 512KiB max
-	unsigned char InstROM[8192];
+	unsigned char header[16];
+	unsigned char trainer[512];
+	unsigned char PRGROM[0x200000]; // 2kb is the largest ROM size ever found in iNes format, so have this as a hard limit.
+	unsigned char CHRROM[0x80000]; // 512KiB max
+	unsigned char instROM[8192];
 	unsigned char PROM[32];
-	FileType FileFormat;
+	FileType fileFormat;
 	int PRGRomSize;
 	int CHRRomSize;
 	int PRGRamSize;
-	CartRegion Region;
-	bool TrainerPresent;
-	int Mapper;
+	CartRegion region;
+	bool trainerPresent;
+	int mapper;
 };
