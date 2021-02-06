@@ -116,11 +116,11 @@ private:
     unsigned short idb;
     unsigned char finex; // Finex register (Contains currently drawing pixel)
     unsigned char finey;
-    //unsigned char Memory[0x3FFF]; // main PPU memory (16kB)
+
     unsigned char OAM[256];
     Nametable Nametables[4]; // PPU has 4 nametables. (Extra one here for data padding - might need to look at later: Sprites get corrupted when writing to nametable 3 otherwise)
     bool pad;
-    unsigned char PaletteMemory[0x1F]; // Memory for storing colour palette information
+    unsigned char PaletteMemory[0x20]; // Memory for storing colour palette information
     void WriteMemory(unsigned short Location, unsigned char value);
 
     void WriteOAM(unsigned char value);
