@@ -41,7 +41,7 @@ void CPU6502::Reset()
 	rY = 0x0;
 	rA = 0x0;
 	pc = (mainMemory->ReadMemory(0xFFFD) * 256) + mainMemory->ReadMemory(0xFFFC);
-	//pc = 0xC000; //- For nestest.nes automatic tests
+
 	sp = 0xFD; // Set the stack pointer
 	SetFlag(Flag::Unused,1);
 	SetFlag(Flag::EInterrupt,1);
@@ -54,7 +54,7 @@ void CPU6502::Reset()
 
 	// Set up CPU logging (if it is enabled)
 	// Set up the std::cout redirect for logging
-InterruptProcessed = false;
+	InterruptProcessed = false;
 
 	#ifdef LOGCPUTOFILE
 	std::cout<<"Logging CPU activity to CPULog.log"<<std::endl;
@@ -63,60 +63,49 @@ InterruptProcessed = false;
 	#endif
 }
 
+/**
+ * Sets a specific flag to true or false depending on the value of "val"
+ * @param flag
+ * @param val
+ */
 void CPU6502::SetFlag(Flag flag, bool val)
 {
-	// Sets a specific flag to true or false depending on the value of "val"
-	if (val)
-		FlagRegister |= flag;
-	else
-		FlagRegister &= ~(flag);
+	val ? FlagRegister |= flag : FlagRegister &= ~(flag);
 }
 
+/**
+ * Sets a specific flag to true or false depending on the value of "val"
+ * @param bit
+ * @param val
+ * @param value
+ * @return
+ */
 unsigned char CPU6502::SetBit(int bit, bool val, unsigned char value) // Used for setting flags to a value which is not the flag register
 {
-	// Sets a specific flag to true or false depending on the value of "val"
-	unsigned char RetVal = value;
-	if (val)
-		RetVal |= (1 << bit);
-	else
-		RetVal &= ~(1 << bit);
-
-	return RetVal;
+	return val ? value | (1 << bit) : value & ~(1 << bit);
 }
 
 bool CPU6502::GetFlag(Flag flag)
 {
 	// Figures out the value of a current flag by AND'ing the flag register against the flag that needs extracting.
-	if (FlagRegister & flag)
-		return true;
-	else
-		return false;
+    return (FlagRegister & flag) != 0;
 }
 
 bool CPU6502::SignBit(unsigned char value)
 {
-	if (value & 1 << 7)
-		return true;
-	else
-		return false;
+    return (value & 1 << 7) != 0;
 }
 
 bool CPU6502::GetBit(int bit, unsigned char value)
 {
 	// Figures out the value of a current flag by AND'ing the flag register against the flag that needs extracting.
-	if (value & (1 << bit))
-		return true;
-	else
-		return false;
+    return (value & (1 << bit)) != 0;
 }
 
 bool CPU6502::GetFlag(Flag flag, unsigned char value)
 {
 	// Figures out the value of a current flag by AND'ing the flag register against the flag that needs extracting.
-	if (value & flag)
-		return true;
-	else
-		return false;
+    return (value & flag) != 0;
 }
 
 unsigned char CPU6502::ORA(unsigned char value) {
