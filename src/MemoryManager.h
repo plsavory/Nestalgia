@@ -1,50 +1,71 @@
 #pragma once
-enum MemoryMapper {None,Test};
-enum HeaderData {Const0,Const1,Const2,Const3,PROMSize,CROMSize,Flags6,Flags7,PRAMSize,Flags9,Flags10,Null};
-
-class MemoryManager
-{
-public:
-	MemoryManager(PPU &mPPU,InputManager &mInput);
-	~MemoryManager();
-	int LoadFile(std::string FilePath);
-	unsigned char ReadMemory(unsigned short Location);
-	unsigned char ReadMemory(unsigned short Location,bool Silent);
-	void WriteMemory(unsigned short Location, unsigned char Value);
-	unsigned short IN(unsigned char Lo, unsigned char Hi);
-	unsigned short INdX(unsigned char rX, unsigned char Loc);
-	unsigned short INdY(unsigned char rY, unsigned char Loc);
-	unsigned short AB(unsigned char Lo, unsigned char Hi);
-	unsigned short AB(unsigned char Off, unsigned char Lo, unsigned char Hi);
-	unsigned short ZP(unsigned char Location);
-	unsigned short ZP(unsigned char Location, unsigned char Register);
-	void PrintDebugInfo();
-		bool pboundarypassed; // Holds true if the previous indirect memory operation passed a page boundary, reset otherwise.
-	// Allow hardware connected to the MemoryManager to set these.
-	bool CheckIRQ();
-	bool CheckNMI();
-	Cartridge *mainCartridge;
-	bool WriteDMA;
-private:
-	unsigned char MainMemory[0xFFFF];
-	void WriteRAM(unsigned short Location, unsigned char Value);
-	void WriteCartridge(unsigned short Location, unsigned char Value);
-	void OAMDMA(unsigned char Location);
-	unsigned short WrapMemory(unsigned short Location, unsigned short WrapValue);
-	unsigned char ReadCartridge(unsigned short Location);
-	unsigned char ReadPPU(unsigned short Location);
-	void WritePPU(unsigned short location,unsigned char value);
-	int CheckCartridge(Cartridge &cartridge);
-	InputManager *mainInput;
-	PPU *mainPPU;
-	MemoryMapper mapper;
-	// Mapper functions
-	unsigned char ReadNROM(unsigned short Location);
-	bool IRQLine;
-	bool NMILine;
-	bool GetBit(int bit, unsigned char value);
+enum MemoryMapper {
+    None, Test
+};
+enum HeaderData {
+    Const0, Const1, Const2, Const3, PROMSize, CROMSize, Flags6, Flags7, PRAMSize, Flags9, Flags10, Null
 };
 
-/*
+class MemoryManager {
+public:
+    bool pageBoundaryPassed; // Holds true if the previous indirect memory operation passed a page boundary, reset otherwise.
+    Cartridge *cartridge;
+    bool writeDMA;
 
-*/
+    MemoryManager(PPU &mPPU, InputManager &mInput);
+
+    ~MemoryManager();
+
+    int loadFile(std::string fileName);
+
+    unsigned char readMemory(unsigned short location);
+
+    void writeMemory(unsigned short location, unsigned char value);
+
+    unsigned short IN(unsigned char lo, unsigned char hi);
+
+    unsigned short INdX(unsigned char rX, unsigned char location);
+
+    unsigned short INdY(unsigned char rY, unsigned char location);
+
+    unsigned short AB(unsigned char lo, unsigned char hi);
+
+    unsigned short AB(unsigned char offset, unsigned char lo, unsigned char hi);
+
+    unsigned short ZP(unsigned char location);
+
+    unsigned short ZP(unsigned char location, unsigned char registerValue);
+
+    bool checkIRQ();
+
+    bool checkNMI();
+
+private:
+    unsigned char memory[0xFFFF];
+    bool IRQLine;
+    bool NMILine;
+    InputManager *inputManager;
+    PPU *ppu;
+    MemoryMapper mapper;
+
+    void writeRAM(unsigned short location, unsigned char value);
+
+    void writeCartridge(unsigned short location, unsigned char value);
+
+    void OAMDMA(unsigned char location);
+
+    unsigned short wrapMemory(unsigned short location, unsigned short wrapValue);
+
+    unsigned char readCartridge(unsigned short location);
+
+    unsigned char readPPU(unsigned short location);
+
+    void writePPU(unsigned short location, unsigned char value);
+
+    int checkCartridge(Cartridge &cartridge);
+
+    bool getBit(int bit, unsigned char value);
+
+    // mapper functions
+    unsigned char readNROM(unsigned short location);
+};

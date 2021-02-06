@@ -1,7 +1,8 @@
 #define PROJECT_NAME "Nestalgia"
 #define PROJECT_VERSION "v0.1.2"
 
-
+#define MAKE_STRING2(x) #x
+#define MAKE_STRING(x) MAKE_STRING2(x)
 
 #ifdef __i386__
 #define PROJECT_ARCH "-x86"
@@ -9,6 +10,10 @@
 #define PROJECT_ARCH "-x86-64"
 #elif __arm__
 #define PROJECT_ARCH "-arm"
+#define ARM_VERSION MAKE_STRING(__ARM_ARCH)
+#elif __aarch64__
+#define PROJECT_ARCH "-arm64"
+#define ARM_VERSION MAKE_STRING(__ARM_ARCH)
 #else
 #define PROJECT_ARCH "unknown-arch"
 #endif
@@ -31,4 +36,16 @@
 #define PROJECT_OS "-bsd"
 #else
 #define PROJECT_OS "-unknown-os"
+#endif
+
+#ifdef CURRENT_BRANCH
+#define BRANCH_STRING MAKE_STRING(CURRENT_BRANCH)
+#else
+#define BRANCH_STRING "unknown"
+#endif
+
+#ifdef CURRENT_COMMIT
+#define CURRENT_COMMIT_STRING MAKE_STRING(CURRENT_COMMIT)
+#else
+#define CURRENT_COMMIT_STRING "none"
 #endif
