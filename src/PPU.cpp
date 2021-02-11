@@ -362,7 +362,8 @@ void PPU::setDataBus(int currentScanLine, int currentPixelXLocation) {
 void PPU::getBitmapDataFromNameTable(unsigned short databus) {
 
     // Ignore the top 3 bits of the data bus as this is relating to fine scroll (the MSB is not used as this is a 15-bit register)
-    unsigned short TileLocation = databus;
+    unsigned short TileLocation = databus << 4;
+    TileLocation = TileLocation >> 4;
 
     // Should be called once per tile (so 33 times per scanline) or every 8 pixels
     unsigned char data = readNameTable(0x2000 + TileLocation);
@@ -520,6 +521,7 @@ void PPU::writeNameTable(unsigned short location, unsigned char value) {
         }
     }
 
+    // TODO: Re-read about the name table mirroring, I have two commits here which disagree on it.
     if (nameTableMirrorMode == 1) {
         // Horizontal mirroring
         if (TargetNametable == 0 || TargetNametable == 2) {
