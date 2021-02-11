@@ -84,7 +84,7 @@ private:
     unsigned char YScroll;
     int addressSelectCounter;
     int scrollLatchCounter;
-    unsigned char dataAddresses[1];
+    unsigned char dataAddresses[2];
     unsigned short db; // Internal data bus register
     unsigned short idb;
     unsigned char tileBitmapXOffset; // Finex register (Contains currently drawing pixel)

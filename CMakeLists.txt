@@ -30,7 +30,6 @@ add_executable(legacynes
         src/CPU6502.h
         src/CPUInstructions.h
         src/EntryPoint.cpp
-        src/ignorewarnings.h
         src/InputManager.cpp
         src/InputManager.h
         src/MainSystem.cpp

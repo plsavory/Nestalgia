@@ -399,7 +399,7 @@ unsigned char PPU::readCROM(unsigned short location) {
 void PPU::selectAddress(unsigned char value) {
     /* The first time the CPU writes to PPUData it is writing the msb of the target address
        The following byte is the lsb of the target address
-       Need to store these somewhere and detect when two writes have occured. */
+       Need to store these somewhere and detect when two writes have occurred. */
     if (addressSelectCounter < 2) {
         // If we don't have two writes, that means the address has not been selected yet.
         dataAddresses[addressSelectCounter] = value;

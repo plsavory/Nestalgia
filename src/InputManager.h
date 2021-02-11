@@ -20,6 +20,8 @@ struct Key {
       // Return if the key in question is pressed or not
       return sf::Keyboard::isKeyPressed(keyCode);
     }
+
+    return false;
   }
 };
 

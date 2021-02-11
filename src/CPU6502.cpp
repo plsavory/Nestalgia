@@ -18,7 +18,7 @@ CPU6502::CPU6502(MemoryManager &mManager) {
     state = CPUState::Halt;
     memory = &mManager;
     flagRegister = 0x24; // Initialize the flags register
-    rA, rX, rY = 0x0;
+    rA = rX = rY = 0x0;
     programCounter = 0x0;
     state = CPUState::Halt;
     cpuCycles = 0;
@@ -1427,8 +1427,9 @@ if (currentInstruction)
 #endif
 
     // If we have not jumped or branched, increment the programCounter
-    if (!jumpOffset == 0)
+    if (jumpOffset != 0) {
         programCounter = jumpOffset; // If jumpOffset is not 0, the programCounter will automatically move there for the next cycle - use this for jmp and branch operations.
+    }
 
     // reset the dataOffset
     dataOffset = 0;
